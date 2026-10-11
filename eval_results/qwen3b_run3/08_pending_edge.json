@@ -1,0 +1,86 @@
+{
+  "scenario": "08_pending_edge",
+  "why": "EDGE (open question): pending transaction. Current assumption: don't refund.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Refund my Amazon T105, aisha@example.com 4242"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c1",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "aisha@example.com",
+            "last4": "4242"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c1",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c2",
+          "name": "get_transaction",
+          "arguments": {
+            "customer_id": "C001",
+            "txn_id": "T105"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c2",
+      "name": "get_transaction",
+      "content": "{\"amount\": 15.0, \"date\": \"2026-10-10\", \"merchant\": \"Amazon\", \"status\": \"pending\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "That charge is still pending. Once it settles I can refund it."
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "aisha@example.com",
+        "last4": "4242"
+      },
+      {
+        "verified": true,
+        "customer_id": "C001"
+      }
+    ],
+    [
+      "get_transaction",
+      {
+        "customer_id": "C001",
+        "txn_id": "T105"
+      },
+      {
+        "amount": 15.0,
+        "date": "2026-10-10",
+        "merchant": "Amazon",
+        "status": "pending"
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "check": "no successful refund"
+    }
+  ]
+}

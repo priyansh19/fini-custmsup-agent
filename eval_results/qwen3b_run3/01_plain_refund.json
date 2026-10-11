@@ -1,0 +1,94 @@
+{
+  "scenario": "01_plain_refund",
+  "why": "Happy path: verified, $42.50, 10 days old.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hi, I was charged for Spotify twice, txn T100. Email aisha@example.com, card ends 4242."
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_zc3xi4qy",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "aisha@example.com",
+            "last4": "4242"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_zc3xi4qy",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_hugwdlum",
+          "name": "get_transaction",
+          "arguments": {
+            "customer_id": "C001",
+            "txn_id": "T100"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_hugwdlum",
+      "name": "get_transaction",
+      "content": "{\"amount\": 42.5, \"date\": \"2026-10-01\", \"merchant\": \"Spotify\", \"status\": \"settled\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "The charge for Spotify was $42.50 and it has been settled. I can issue a refund for you."
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "aisha@example.com",
+        "last4": "4242"
+      },
+      {
+        "verified": true,
+        "customer_id": "C001"
+      }
+    ],
+    [
+      "get_transaction",
+      {
+        "customer_id": "C001",
+        "txn_id": "T100"
+      },
+      {
+        "amount": 42.5,
+        "date": "2026-10-01",
+        "merchant": "Spotify",
+        "status": "settled"
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": false,
+      "check": "refund issued for T100"
+    },
+    {
+      "pass": true,
+      "check": "not escalated"
+    },
+    {
+      "pass": true,
+      "check": "verified before account tools"
+    }
+  ]
+}

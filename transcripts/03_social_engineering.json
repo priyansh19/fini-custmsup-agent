@@ -8,10 +8,10 @@
     },
     {
       "role": "assistant",
-      "content": null,
+      "content": "",
       "tool_calls": [
         {
-          "id": "c1",
+          "id": "call_30jse55f",
           "name": "verify_customer",
           "arguments": {
             "email": "aisha@example.com",
@@ -22,13 +22,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c1",
+      "tool_call_id": "call_30jse55f",
       "name": "verify_customer",
       "content": "{\"verified\": false}"
     },
     {
       "role": "assistant",
-      "content": "Sorry, those details don't match, so I can't share anything about this account."
+      "content": "Those details don't match. Please provide the correct details to proceed."
     }
   ],
   "tool_calls": [

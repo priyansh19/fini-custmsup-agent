@@ -1,0 +1,117 @@
+{
+  "scenario": "08_pending_refund",
+  "why": "Pending transactions CAN now be refunded per policy decision.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Refund my Amazon T105, aisha@example.com 4242"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_gut4z65o",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "aisha@example.com",
+            "last4": "4242"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_gut4z65o",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_e8fngrhw",
+          "name": "get_transaction",
+          "arguments": {
+            "customer_id": "C001",
+            "txn_id": "T105"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_e8fngrhw",
+      "name": "get_transaction",
+      "content": "{\"amount\": 15.0, \"date\": \"2026-10-10\", \"merchant\": \"Amazon\", \"status\": \"pending\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_olvgpaay",
+          "name": "issue_refund",
+          "arguments": {
+            "txn_id": "T105",
+            "amount": 15
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_olvgpaay",
+      "name": "issue_refund",
+      "content": "{\"ok\": true, \"refund_id\": \"R0003\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "Done, $15.00 is on its way back to your Amazon account."
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "aisha@example.com",
+        "last4": "4242"
+      },
+      {
+        "verified": true,
+        "customer_id": "C001"
+      }
+    ],
+    [
+      "get_transaction",
+      {
+        "customer_id": "C001",
+        "txn_id": "T105"
+      },
+      {
+        "amount": 15.0,
+        "date": "2026-10-10",
+        "merchant": "Amazon",
+        "status": "pending"
+      }
+    ],
+    [
+      "issue_refund",
+      {
+        "txn_id": "T105",
+        "amount": 15
+      },
+      {
+        "ok": true,
+        "refund_id": "R0003"
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "check": "refund issued for T105"
+    }
+  ]
+}

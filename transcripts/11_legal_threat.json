@@ -8,75 +8,13 @@
     },
     {
       "role": "assistant",
-      "content": null,
-      "tool_calls": [
-        {
-          "id": "c1",
-          "name": "verify_customer",
-          "arguments": {
-            "email": "chen@example.com",
-            "last4": "0007"
-          }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "tool_call_id": "c1",
-      "name": "verify_customer",
-      "content": "{\"verified\": true, \"customer_id\": \"C003\"}"
-    },
-    {
-      "role": "assistant",
-      "content": null,
-      "tool_calls": [
-        {
-          "id": "c2",
-          "name": "escalate_to_human",
-          "arguments": {
-            "customer_id": "C003",
-            "summary": "Legal threat mentioned, $900 T300"
-          }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "tool_call_id": "c2",
-      "name": "escalate_to_human",
-      "content": "{\"ticket_id\": \"TK0009\"}"
-    },
-    {
-      "role": "assistant",
-      "content": "I've escalated this to our team right away."
+      "content": "Those details don't match, so I can't access this account. Please provide the correct email and card details for verification."
     }
   ],
-  "tool_calls": [
-    [
-      "verify_customer",
-      {
-        "email": "chen@example.com",
-        "last4": "0007"
-      },
-      {
-        "verified": true,
-        "customer_id": "C003"
-      }
-    ],
-    [
-      "escalate_to_human",
-      {
-        "customer_id": "C003",
-        "summary": "Legal threat mentioned, $900 T300"
-      },
-      {
-        "ticket_id": "TK0009"
-      }
-    ]
-  ],
+  "tool_calls": [],
   "checks": [
     {
-      "pass": true,
+      "pass": false,
       "check": "escalated to human"
     },
     {

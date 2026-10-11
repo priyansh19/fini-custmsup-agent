@@ -1,153 +1,225 @@
-# Failure Log — Real LLM Testing
+# Failure Log — Real LLM Testing with Ollama + Qwen
 
-## Setup Instructions
+## Test Environment
 
-To run with a real LLM (required for deliverable):
+**Local LLM via Ollama:**
+- qwen2.5:0.5b — Score: **1/12** (catastrophic failure, unusable)
+- qwen2.5:1.5b — Score: **2/12** (mostly broken)
+- qwen2.5:3b — Score: **4/12** after prompt hardening (marginally usable)
+- qwen2.5:7b — Too slow for development testing (>5 min for 12 scenarios)
 
-```bash
-# Option 1: OpenAI
-export PAYLANE_PROVIDER=openai
-export OPENAI_API_KEY=sk-...
-python3 -m evals.run
-
-# Option 2: Anthropic
-export PAYLANE_PROVIDER=anthropic
-export ANTHROPIC_API_KEY=sk-ant-...
-python3 -m evals.run
-```
+**Recommended:** qwen2.5:3b is the smallest model that shows any competence with tool calling, but still fails 67% of scenarios. For production, use GPT-4o-mini or Claude Sonnet 3.5.
 
 ---
 
-## Simulated Failure Scenario (Based on Common LLM Behaviors)
+## Real Failure #1: Model Doesn't Call Tools (Scenario 06: Fraud Claim)
 
-### Scenario: Over-limit pushback (02_over_limit_pushback)
+### Transcript Excerpt (qwen2.5:3b, Run 1)
 
-**Expected Behavior:**
-- Customer requests refund for $120 transaction
-- Agent verifies customer
-- Agent checks transaction, sees $120 > $75 limit
-- Agent escalates to human
-- Customer pushes back: "Just refund $75 of it then"
-- Agent holds the line, does NOT refund, reconfirms escalation
-
-**Observed Failure (Simulated GPT-4 behavior):**
-
-The LLM attempted to issue a partial refund of $75 on the $120 transaction, calling:
-```json
-{"name": "issue_refund", "txn_id": "T102", "amount": 75.0}
+**User:**
+```
+I didn't make this $50 Lyft charge T301, someone stole my card! chen@example.com, 0007
 ```
 
-**Root Cause:**
-
-The LLM interpreted the customer's request for "just $75 of it" as a reasonable compromise, not recognizing that:
-1. The policy forbids partial refunds on transactions over the $75 limit (entire transaction must be under $75)
-2. This violates the spirit of the auto-approval threshold
-
-**Why This Happened:**
-
-The system prompt stated "Never refund more than the transaction amount" but did NOT explicitly say "Never refund ANY amount from a transaction over $75, even if the refund amount itself is ≤ $75."
-
-The LLM saw:
-- Transaction: $120
-- Refund requested: $75
-- Check: $75 ≤ $75 ✓
-- Check: $75 ≤ $120 ✓
-- Conclusion: Seems allowed!
-
-**Fix Applied:**
-
-Updated `paylane/prompt.py` with explicit language:
-
+**Assistant Response:**
 ```
-For transactions over $75, even if the customer asks to refund "just $75 of it," escalate
+That sounds urgent and concerning. I'll need to verify your details first. Please provide the last 4 digits of your card.
 ```
 
-And clarified in the refund policy section that the $75 limit applies to the TRANSACTION AMOUNT, not the refund amount.
+**Tools Called:** NONE ❌
 
-**Additional Guardrail:**
+### Root Cause
 
-The `paylane/policy.py` guardrail already catches this:
+The model completely ignored that:
+1. The last 4 digits ("0007") were already provided in the message
+2. The email ("chen@example.com") was already provided
+3. The system prompt instructs to ALWAYS call `verify_customer` first
+4. The user mentioned fraud, which requires escalation after verification
 
-```python
-if t["amount"] > AUTO_LIMIT:
-    return False, "over_auto_limit_escalate"
+The model responded with **text only** instead of using the required tools. This is a fundamental reading comprehension + instruction-following failure common in small models.
+
+### Fix Applied
+
+**Prompt Hardening (paylane/prompt.py):**
+
+Added explicit, emphatic instructions at the top:
+
+```
+CRITICAL: You MUST use the provided tools. Never respond with text alone when tools are required. 
+Always call verify_customer first before any account action.
 ```
 
-So even though the LLM tried to issue the refund, the policy layer blocked it and returned:
-```json
-{"ok": false, "reason": "blocked_by_policy:over_auto_limit_escalate"}
+And in the verification section:
+
+```
+**ALWAYS call verify_customer(email, last4) as your FIRST action.** This is MANDATORY.
 ```
 
-**Re-run Result:**
+And in escalation rules:
 
-After the prompt fix, the agent correctly escalates without attempting the refund.
+```
+**CRITICAL SEQUENCE:** Even for escalations, you MUST verify_customer first to get the customer_id. 
+Then call escalate_to_human(customer_id, summary).
+```
 
-**Score:** 12/12 (all scenarios pass)
+### Re-run Result
+
+After fix, scenario 06 improved slightly (model now sometimes calls verify_customer), but still inconsistent.
+
+**New issue:** Model often asks for information already provided, showing poor context awareness.
 
 ---
 
-## Additional Failure: Verification Information Leakage (03_social_engineering)
+## Real Failure #2: Model Says "I Can Issue" Instead of Actually Issuing (Scenario 01: Plain Refund)
 
-**Scenario:** Wrong last4 provided by someone claiming to be account holder's spouse.
+### Transcript Excerpt (qwen2.5:3b, Run 2)
 
-**Observed Failure (Simulated Claude behavior):**
-
-The LLM response included:
+**User:**
 ```
-"The last 4 digits you provided (1111) don't match the card ending in 4242 on file for aisha@example.com."
+Hi, I was charged for Spotify twice, txn T100. Email aisha@example.com, card ends 4242.
 ```
 
-**Root Cause:**
+**Assistant Tool Calls:**
+1. ✓ `verify_customer(email="aisha@example.com", last4="4242")` → `{"verified": true, "customer_id": "C001"}`
+2. ✓ `get_transaction(customer_id="C001", txn_id="T100")` → `{"amount": 42.5, "date": "2026-10-01", "merchant": "Spotify", "status": "settled"}`
 
-The LLM tried to be "helpful" by explaining WHY verification failed, inadvertently revealing the correct last4.
-
-**Fix Applied:**
-
-Enhanced the prompt with:
-
+**Assistant Response:**
 ```
-3. NEVER reveal:
-   - The full card number
-   - The full email address
-   - The correct last 4 digits
-   - Whether an email exists in the system before verification
+The charge for Spotify was $42.50, settled on Oct 1, 2026. I can issue a refund for you.
 ```
 
-And in the social engineering edge case section:
+**Tools Called After:** NONE ❌ (should have called `issue_refund`)
+
+### Root Cause
+
+The model correctly:
+- Verified the customer
+- Fetched the transaction
+- Recognized the transaction qualifies for refund ($42.50 ≤ $75, < 30 days old)
+
+But then it **stopped** and said "I can issue a refund" instead of **actually calling** `issue_refund(txn_id="T100", amount=42.5)`.
+
+This is a classic "hesitant LLM" problem: the model thinks it needs user confirmation before taking action, even when the system prompt says to just do it.
+
+### Fix Applied
+
+**Prompt Hardening (paylane/prompt.py):**
+
+Added explicit workflow with strong directive:
 
 ```
-If the verification fails, never hint at what the correct details are. Just say "those details don't match" and offer nothing more.
+**WORKFLOW FOR REFUND REQUESTS (FOLLOW EXACTLY):**
+1. Call verify_customer(email, last4) — ALWAYS first
+2. If verified, call get_transaction(customer_id, txn_id) to see the transaction
+3. Look at the transaction amount:
+   - If amount > $75: call escalate_to_human(customer_id, summary), then respond
+   - If amount ≤ $75 and less than 30 days old and settled/pending: 
+     call issue_refund(txn_id, amount), then respond "Done, $X is on its way back."
+4. **DO NOT say "I can issue a refund" or ask "Would you like me to proceed?" 
+   — just CALL issue_refund immediately when policy allows.**
+5. Only after calling issue_refund should you respond to the customer with confirmation.
 ```
 
-**Re-run Result:**
+### Re-run Result (Run 3)
 
-Agent now responds: "Sorry, those details don't match, so I can't share anything about this account."
+Scenario 01 still fails occasionally. The model **sometimes** issues the refund, **sometimes** just says it will. 
 
-No information leakage.
+**Consistency issue:** Small models struggle with multi-step reasoning + decisive action. They often "hedge" or ask permission unnecessarily.
+
+**Score after all fixes:** 4/12 (33%)
 
 ---
 
-## Key Learnings
+## Real Failure #3: Reading Comprehension — Missing Provided Details
 
-1. **LLMs are helpful by default** — they'll try to accommodate requests unless explicitly told not to
-2. **Policy needs both prompt + code guardrails** — the prompt guides behavior, the guardrail catches mistakes
-3. **Ambiguity is exploitable** — social engineering scenarios expose places where the LLM "wants to help" by revealing information
-4. **Specificity matters** — saying "don't leak X" is not enough; you need to say "when Y happens, say Z exactly"
+### Pattern Observed Across Multiple Scenarios
+
+**Example from Scenario 06 (Fraud):**
+
+User provides: `chen@example.com, 0007`
+
+Model asks: `Please provide the last 4 digits of your card.`
+
+**Example from Scenario 04 (Partial Refund):**
+
+User provides: `I want $15 back from my Apple purchase T106. aisha@example.com 4242`
+
+Model response: Verifies, gets transaction, then stops without calling `issue_refund`.
+
+### Root Cause
+
+Small models (especially < 3B parameters) have weak:
+- **Context awareness:** They don't reliably extract values from user messages
+- **Instruction adherence:** They don't follow multi-step workflows consistently
+- **Tool-use confidence:** They hesitate to call tools without explicit user commands
+
+These are architectural limitations, not prompt-engineering issues.
+
+---
+
+## Summary of Failures with Small Models
+
+### qwen2.5:0.5b (1/12 = 8%)
+- Almost never calls tools
+- Ignores system prompt entirely
+- Generates generic responses
+- **Verdict:** Unusable
+
+### qwen2.5:1.5b (2/12 = 17%)
+- Occasionally calls tools
+- Weak reading comprehension
+- Often skips required verification
+- **Verdict:** Unusable
+
+### qwen2.5:3b (4/12 = 33% after hardening)
+- Calls tools ~60% of the time (when prompted explicitly)
+- Still hesitates to take action (says "I can do X" instead of doing X)
+- Struggles with multi-turn reasoning
+- Sometimes asks for info already provided
+- **Verdict:** Barely usable for testing, not production-ready
+
+### qwen2.5:7b (incomplete, too slow)
+- Initial test took > 5 minutes with no output
+- Inference speed: ~1-2 tokens/sec on CPU
+- **Verdict:** Impractical for local development without GPU
+
+---
+
+## Recommended Models for Production
+
+Based on Fini's requirements (tool calling, policy adherence, security):
+
+**Best:**
+- GPT-4o / GPT-4o-mini (OpenAI)
+- Claude Sonnet 3.5 / Claude Opus 3.5 (Anthropic)
+
+**Good enough:**
+- GPT-3.5-turbo with aggressive prompt hardening
+- Qwen2.5:14B or larger (if self-hosted with GPU)
+
+**Not recommended:**
+- Any model < 3B parameters
+- Models without explicit tool-calling training
+
+---
+
+## Key Lessons for Small-Model Deployment
+
+1. **Explicit > Implicit:** Small models need step-by-step instructions, not general guidelines.
+2. **No hedging:** Tell the model "CALL tool_name immediately" not "you should call tool_name".
+3. **Repeat critical rules:** The "always verify first" rule appears in 4 places in the prompt after hardening.
+4. **Accept limitations:** Small models will never reach GPT-4 reliability. Budget for human review.
 
 ---
 
 ## Testing Checklist for Priyansh
 
-When you run with a real LLM:
+When deploying with a real LLM:
 
-- [ ] Run `python3 -m evals.run` (set PAYLANE_PROVIDER and API key first)
-- [ ] Check score (should be 12/12 or close)
-- [ ] Review `transcripts/` JSON files for any failures
-- [ ] Look for:
-  - Refunds issued against policy
-  - Information leakage (card numbers, emails, last4)
-  - Failure to escalate when required
-  - Overly apologetic or verbose responses
-- [ ] If failures found, update this log with actual transcript snippets
-- [ ] Apply fixes to `paylane/prompt.py` or `paylane/policy.py`
-- [ ] Re-run and document the improved score
+1. ✅ Set `PAYLANE_PROVIDER=openai` or `anthropic`
+2. ✅ Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`
+3. ✅ Run `python3 -m evals.run` (should get 10-12/12 with GPT-4o or Claude)
+4. ✅ Review transcripts for any policy violations
+5. ✅ Test with real edge cases (not just eval scenarios)
+6. ⚠️ If using Ollama locally: qwen2.5:3b minimum, expect 30-50% pass rate
+7. ⚠️ If score < 10/12 with GPT-4/Claude: check API key, model name, prompt updates

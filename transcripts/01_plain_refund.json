@@ -8,10 +8,10 @@
     },
     {
       "role": "assistant",
-      "content": null,
+      "content": "",
       "tool_calls": [
         {
-          "id": "c1",
+          "id": "call_twt0q1w9",
           "name": "verify_customer",
           "arguments": {
             "email": "aisha@example.com",
@@ -22,16 +22,16 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c1",
+      "tool_call_id": "call_twt0q1w9",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
     },
     {
       "role": "assistant",
-      "content": null,
+      "content": "",
       "tool_calls": [
         {
-          "id": "c2",
+          "id": "call_lirtwuda",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "C001",
@@ -42,33 +42,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c2",
+      "tool_call_id": "call_lirtwuda",
       "name": "get_transaction",
       "content": "{\"amount\": 42.5, \"date\": \"2026-10-01\", \"merchant\": \"Spotify\", \"status\": \"settled\"}"
     },
     {
       "role": "assistant",
-      "content": null,
-      "tool_calls": [
-        {
-          "id": "c3",
-          "name": "issue_refund",
-          "arguments": {
-            "txn_id": "T100",
-            "amount": 42.5
-          }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "tool_call_id": "c3",
-      "name": "issue_refund",
-      "content": "{\"ok\": true, \"refund_id\": \"R0001\"}"
-    },
-    {
-      "role": "assistant",
-      "content": "Done, $42.50 for Spotify is on its way back to you."
+      "content": "The charge for Spotify was $42.50, settled on Oct 1, 2026. I can issue a refund for this."
     }
   ],
   "tool_calls": [
@@ -95,22 +75,11 @@
         "merchant": "Spotify",
         "status": "settled"
       }
-    ],
-    [
-      "issue_refund",
-      {
-        "txn_id": "T100",
-        "amount": 42.5
-      },
-      {
-        "ok": true,
-        "refund_id": "R0001"
-      }
     ]
   ],
   "checks": [
     {
-      "pass": true,
+      "pass": false,
       "check": "refund issued for T100"
     },
     {

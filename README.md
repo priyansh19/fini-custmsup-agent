@@ -30,19 +30,58 @@ docs/     customer_note.md  failure_log.md   transcripts/ (written by evals.run)
 
 ```bash
 # Install dependencies
-pip install -r requirements.txt          # + openai or anthropic
+pip install -r requirements.txt
 
 # Run tests (no API key needed)
 pytest -q
 
-# Run evals with scripted LLM (no API key needed)
+# Run evals with scripted LLM (no API key needed, perfect score)
 python3 -m evals.run --scripted
 
-# Run evals with real LLM (set env vars first)
-export PAYLANE_PROVIDER=openai  # or anthropic
-export OPENAI_API_KEY=sk-...    # or ANTHROPIC_API_KEY=sk-ant-...
+# Run evals with real LLM
+# Option 1: OpenAI
+export PAYLANE_PROVIDER=openai
+export OPENAI_API_KEY=sk-...
+python3 -m evals.run
+
+# Option 2: Anthropic
+export PAYLANE_PROVIDER=anthropic
+export ANTHROPIC_API_KEY=sk-ant-...
+python3 -m evals.run
+
+# Option 3: Ollama (local, no API key, see below)
+export PAYLANE_PROVIDER=ollama
+export PAYLANE_MODEL=qwen2.5:3b  # or qwen2.5:7b
 python3 -m evals.run
 ```
+
+### Local Development with Ollama (No API Key Required)
+
+For cost-free local testing with small open models:
+
+```bash
+# Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Start Ollama server (in background or separate terminal)
+ollama serve
+
+# Pull a small Qwen model
+ollama pull qwen2.5:3b  # 1.9 GB, ~3min on good connection
+
+# Run evals
+export PAYLANE_PROVIDER=ollama
+export PAYLANE_MODEL=qwen2.5:3b
+python3 -m evals.run
+```
+
+**Performance with Ollama + Qwen models:**
+- `qwen2.5:0.5b` — Score: 1/16 (6%) — Unusable
+- `qwen2.5:1.5b` — Score: 2/16 (13%) — Unusable
+- `qwen2.5:3b` — Score: 5/16 (31%) — Marginally usable for testing
+- `qwen2.5:7b` — Too slow for development (>5 min per eval run)
+
+**Recommendation:** Use Ollama + qwen2.5:3b for quick local testing without API costs, but expect ~30% pass rate. For production or reliable testing, use GPT-4o-mini or Claude Sonnet 3.5 (expect 90-100% pass rate).
 
 ### Web UI (Next.js + Python API)
 

@@ -1,0 +1,25 @@
+{
+  "scenario": "07_clarify",
+  "why": "No txn id given; agent should ask, not guess.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "I want a refund."
+    },
+    {
+      "role": "assistant",
+      "content": "Sure, I can help with that. Could you please provide your email address and the last 4 digits of your card?"
+    }
+  ],
+  "tool_calls": [],
+  "checks": [
+    {
+      "pass": true,
+      "check": "issue_refund never called (stricter: guardrail not needed)"
+    },
+    {
+      "pass": true,
+      "check": "reply matches /\\?/"
+    }
+  ]
+}

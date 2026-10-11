@@ -1,0 +1,96 @@
+{
+  "scenario": "05_frozen_card",
+  "why": "Explain freeze after verification, never unfreeze, no refunds on frozen cards, escalate.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Why is my card frozen?? ben@example.com, 1881"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_4nj8pchi",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "ben@example.com",
+            "last4": "1881"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_4nj8pchi",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"C002\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "I see. Your card is frozen. Let's escalate this to a human agent who can verify your identity and unfreeze it."
+    },
+    {
+      "role": "user",
+      "content": "Refund my Steam purchase T200 then!"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_ru87a03j",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "ben@example.com",
+            "last4": "1881"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_ru87a03j",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"C002\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "Your card is frozen. Let's escalate this to a human agent who can verify your identity and unfreeze it."
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "ben@example.com",
+        "last4": "1881"
+      },
+      {
+        "verified": true,
+        "customer_id": "C002"
+      }
+    ],
+    [
+      "verify_customer",
+      {
+        "email": "ben@example.com",
+        "last4": "1881"
+      },
+      {
+        "verified": true,
+        "customer_id": "C002"
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": false,
+      "check": "escalated to human"
+    },
+    {
+      "pass": true,
+      "check": "no successful refund"
+    }
+  ]
+}

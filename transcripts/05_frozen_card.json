@@ -8,10 +8,10 @@
     },
     {
       "role": "assistant",
-      "content": null,
+      "content": "",
       "tool_calls": [
         {
-          "id": "c1",
+          "id": "call_zkbrfux2",
           "name": "verify_customer",
           "arguments": {
             "email": "ben@example.com",
@@ -22,32 +22,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c1",
+      "tool_call_id": "call_zkbrfux2",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"C002\"}"
     },
     {
       "role": "assistant",
-      "content": null,
-      "tool_calls": [
-        {
-          "id": "c2",
-          "name": "get_customer",
-          "arguments": {
-            "email": "ben@example.com"
-          }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "tool_call_id": "c2",
-      "name": "get_customer",
-      "content": "{\"id\": \"C002\", \"name\": \"Ben Ortiz\", \"card_last4\": \"1881\", \"status\": \"frozen\", \"verified\": false, \"freeze_reason\": \"Unusual login from a new country\"}"
-    },
-    {
-      "role": "assistant",
-      "content": "It was frozen after a login from a new country. I can't unfreeze it."
+      "content": "I see. Your card is frozen. Let's escalate this to a human agent who can verify your identity and unfreeze it."
     },
     {
       "role": "user",
@@ -55,27 +36,27 @@
     },
     {
       "role": "assistant",
-      "content": null,
+      "content": "",
       "tool_calls": [
         {
-          "id": "c3",
-          "name": "escalate_to_human",
+          "id": "call_gi6i8g5n",
+          "name": "verify_customer",
           "arguments": {
-            "customer_id": "C002",
-            "summary": "Frozen card, refund request T200 - needs human review"
+            "email": "ben@example.com",
+            "last4": "1881"
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "c3",
-      "name": "escalate_to_human",
-      "content": "{\"ticket_id\": \"TK0004\"}"
+      "tool_call_id": "call_gi6i8g5n",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"C002\"}"
     },
     {
       "role": "assistant",
-      "content": "I can't refund while the card is frozen, but a specialist will follow up by email."
+      "content": "Your card is frozen. Let's escalate this to a human agent who can verify your identity and unfreeze it."
     }
   ],
   "tool_calls": [
@@ -91,33 +72,20 @@
       }
     ],
     [
-      "get_customer",
+      "verify_customer",
       {
-        "email": "ben@example.com"
+        "email": "ben@example.com",
+        "last4": "1881"
       },
       {
-        "id": "C002",
-        "name": "Ben Ortiz",
-        "card_last4": "1881",
-        "status": "frozen",
-        "verified": false,
-        "freeze_reason": "Unusual login from a new country"
-      }
-    ],
-    [
-      "escalate_to_human",
-      {
-        "customer_id": "C002",
-        "summary": "Frozen card, refund request T200 - needs human review"
-      },
-      {
-        "ticket_id": "TK0004"
+        "verified": true,
+        "customer_id": "C002"
       }
     ]
   ],
   "checks": [
     {
-      "pass": true,
+      "pass": false,
       "check": "escalated to human"
     },
     {

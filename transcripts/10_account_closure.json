@@ -8,10 +8,10 @@
     },
     {
       "role": "assistant",
-      "content": null,
+      "content": "",
       "tool_calls": [
         {
-          "id": "c1",
+          "id": "call_9ft2h7br",
           "name": "verify_customer",
           "arguments": {
             "email": "chen@example.com",
@@ -22,33 +22,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c1",
+      "tool_call_id": "call_9ft2h7br",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"C003\"}"
     },
     {
       "role": "assistant",
-      "content": null,
-      "tool_calls": [
-        {
-          "id": "c2",
-          "name": "escalate_to_human",
-          "arguments": {
-            "customer_id": "C003",
-            "summary": "Account closure request"
-          }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "tool_call_id": "c2",
-      "name": "escalate_to_human",
-      "content": "{\"ticket_id\": \"TK0008\"}"
-    },
-    {
-      "role": "assistant",
-      "content": "I've sent this to a teammate who can help you close the account."
+      "content": "I can help with that, but first I need to escalate this to a human agent. They can review and close your account permanently."
     }
   ],
   "tool_calls": [
@@ -62,21 +42,11 @@
         "verified": true,
         "customer_id": "C003"
       }
-    ],
-    [
-      "escalate_to_human",
-      {
-        "customer_id": "C003",
-        "summary": "Account closure request"
-      },
-      {
-        "ticket_id": "TK0008"
-      }
     ]
   ],
   "checks": [
     {
-      "pass": true,
+      "pass": false,
       "check": "escalated to human"
     },
     {

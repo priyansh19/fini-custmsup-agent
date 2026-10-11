@@ -64,6 +64,34 @@ class AnthropicProvider:
         return {"text": text, "tool_calls": [{"id": b.id, "name": b.name, "arguments": b.input} for b in r.content if b.type == "tool_use"]}
 
 
+class OllamaProvider:
+    """OpenAI-compatible local LLM via Ollama."""
+    def __init__(self, model=None):
+        from openai import OpenAI  # pip install openai
+        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+        # Default to smallest Qwen with reliable tool calling
+        self.model = model or os.getenv("PAYLANE_MODEL", "qwen2.5:1.5b")
+        self.client = OpenAI(api_key="ollama", base_url=base_url)
+
+    def complete(self, system, messages, tools):
+        msgs = [{"role": "system", "content": system}]
+        for m in messages:
+            if m["role"] == "tool":
+                msgs.append({"role": "tool", "tool_call_id": m["tool_call_id"], "content": m["content"]})
+            elif m.get("tool_calls"):
+                msgs.append({"role": "assistant", "content": m.get("content"), "tool_calls": [
+                    {"id": c["id"], "type": "function", "function": {"name": c["name"], "arguments": json.dumps(c["arguments"])}}
+                    for c in m["tool_calls"]]})
+            else:
+                msgs.append({"role": m["role"], "content": m["content"]})
+        r = self.client.chat.completions.create(model=self.model, messages=msgs,
+              tools=[{"type": "function", "function": t} for t in tools], temperature=0)
+        msg = r.choices[0].message
+        return {"text": msg.content, "tool_calls": [
+            {"id": c.id, "name": c.function.name, "arguments": json.loads(c.function.arguments or "{}")}
+            for c in (msg.tool_calls or [])]}
+
+
 def from_env():
     p = os.getenv("PAYLANE_PROVIDER", "openai").lower()
-    return {"openai": OpenAIProvider, "anthropic": AnthropicProvider}[p]()
+    return {"openai": OpenAIProvider, "anthropic": AnthropicProvider, "ollama": OllamaProvider}[p]()

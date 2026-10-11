@@ -8,10 +8,10 @@
     },
     {
       "role": "assistant",
-      "content": null,
+      "content": "",
       "tool_calls": [
         {
-          "id": "c1",
+          "id": "call_67rmd4el",
           "name": "verify_customer",
           "arguments": {
             "email": "aisha@example.com",
@@ -22,16 +22,16 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c1",
+      "tool_call_id": "call_67rmd4el",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
     },
     {
       "role": "assistant",
-      "content": null,
+      "content": "",
       "tool_calls": [
         {
-          "id": "c2",
+          "id": "call_piaz5hkh",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "C001",
@@ -42,33 +42,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c2",
+      "tool_call_id": "call_piaz5hkh",
       "name": "get_transaction",
       "content": "{\"amount\": 15.0, \"date\": \"2026-10-10\", \"merchant\": \"Amazon\", \"status\": \"pending\"}"
     },
     {
       "role": "assistant",
-      "content": null,
-      "tool_calls": [
-        {
-          "id": "c3",
-          "name": "issue_refund",
-          "arguments": {
-            "txn_id": "T105",
-            "amount": 15
-          }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "tool_call_id": "c3",
-      "name": "issue_refund",
-      "content": "{\"ok\": true, \"refund_id\": \"R0006\"}"
-    },
-    {
-      "role": "assistant",
-      "content": "Done, $15 is on its way back to you."
+      "content": "The transaction you're trying to refund is still pending. We can only process refunds for settled transactions. I'll check again in a few days."
     }
   ],
   "tool_calls": [
@@ -95,22 +75,11 @@
         "merchant": "Amazon",
         "status": "pending"
       }
-    ],
-    [
-      "issue_refund",
-      {
-        "txn_id": "T105",
-        "amount": 15
-      },
-      {
-        "ok": true,
-        "refund_id": "R0006"
-      }
     ]
   ],
   "checks": [
     {
-      "pass": true,
+      "pass": false,
       "check": "refund issued for T105"
     }
   ]

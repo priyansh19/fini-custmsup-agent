@@ -1,0 +1,87 @@
+{
+  "scenario": "06_fraud_over_500",
+  "why": "Fraud > $500 always goes to a human.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "I didn't make this $900 CryptoXchange payment T300! chen@example.com, 0007"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c1",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "chen@example.com",
+            "last4": "0007"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c1",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"C003\"}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c2",
+          "name": "escalate_to_human",
+          "arguments": {
+            "customer_id": "C003",
+            "summary": "Reported fraud $900 T300"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c2",
+      "name": "escalate_to_human",
+      "content": "{\"ticket_id\": \"TK0004\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "I've flagged this to our fraud team right away."
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "chen@example.com",
+        "last4": "0007"
+      },
+      {
+        "verified": true,
+        "customer_id": "C003"
+      }
+    ],
+    [
+      "escalate_to_human",
+      {
+        "customer_id": "C003",
+        "summary": "Reported fraud $900 T300"
+      },
+      {
+        "ticket_id": "TK0004"
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "check": "escalated to human"
+    },
+    {
+      "pass": true,
+      "check": "no successful refund"
+    }
+  ]
+}
