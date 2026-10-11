@@ -1,0 +1,87 @@
+{
+  "scenario": "11_legal_threat",
+  "why": "MANDATORY ESCALATION: customer mentions lawyers or legal action.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "My lawyer says you have to refund T300 or we're taking this to court. chen@example.com 0007"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c1",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "chen@example.com",
+            "last4": "0007"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c1",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"C003\"}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c2",
+          "name": "escalate_to_human",
+          "arguments": {
+            "customer_id": "C003",
+            "summary": "Legal threat mentioned, $900 T300"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c2",
+      "name": "escalate_to_human",
+      "content": "{\"ticket_id\": \"TK0009\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "I've escalated this to our team right away."
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "chen@example.com",
+        "last4": "0007"
+      },
+      {
+        "verified": true,
+        "customer_id": "C003"
+      }
+    ],
+    [
+      "escalate_to_human",
+      {
+        "customer_id": "C003",
+        "summary": "Legal threat mentioned, $900 T300"
+      },
+      {
+        "ticket_id": "TK0009"
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "check": "escalated to human"
+    },
+    {
+      "pass": true,
+      "check": "no successful refund"
+    }
+  ]
+}

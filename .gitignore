@@ -1,0 +1,14 @@
+.env
+__pycache__/
+.pytest_cache/
+.venv/
+*.pyc
+*.log
+
+# Node/Next.js
+web/node_modules/
+web/.next/
+web/out/
+
+# Vercel
+.vercel/

@@ -1,0 +1,200 @@
+.container {
+  min-height: 100vh;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.main {
+  width: 100%;
+  max-width: 800px;
+  min-height: 90vh;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+  margin: 20px;
+}
+
+.header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #111827;
+}
+
+.demoTag {
+  background: #fbbf24;
+  color: #78350f;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.resetButton {
+  background: #6366f1;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.resetButton:hover {
+  background: #4f46e5;
+}
+
+.chatContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.welcome {
+  text-align: center;
+  color: #6b7280;
+  margin-top: 60px;
+}
+
+.welcome p {
+  margin: 12px 0;
+  font-size: 16px;
+}
+
+.hint {
+  font-size: 14px !important;
+  color: #9ca3af;
+  margin-top: 24px !important;
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.message {
+  padding: 12px 16px;
+  border-radius: 12px;
+  max-width: 80%;
+}
+
+.user {
+  background: #6366f1;
+  color: white;
+  align-self: flex-end;
+  margin-left: auto;
+}
+
+.assistant {
+  background: #f3f4f6;
+  color: #111827;
+  align-self: flex-start;
+}
+
+.messageContent {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.toolCallsDetail {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.toolCallsDetail summary {
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0;
+}
+
+.toolCall {
+  margin-top: 8px;
+  padding: 8px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+}
+
+.toolCall pre {
+  margin: 4px 0 0 0;
+  font-size: 11px;
+  overflow-x: auto;
+}
+
+.loading {
+  color: #9ca3af;
+  font-style: italic;
+  text-align: center;
+}
+
+.inputContainer {
+  padding: 20px 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 12px;
+}
+
+.input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.sendButton {
+  background: #6366f1;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.sendButton:hover:not(:disabled) {
+  background: #4f46e5;
+}
+
+.sendButton:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+}
+
+.links {
+  padding: 16px 24px;
+  text-align: center;
+  border-top: 1px solid #e5e7eb;
+}
+
+.links a {
+  color: #6366f1;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.links a:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,86 @@
+{
+  "scenario": "04_already_refunded",
+  "why": "Double refund attempt; guardrail + tool both reject.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Refund T106 please, aisha@example.com 4242"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c1",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "aisha@example.com",
+            "last4": "4242"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c1",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c2",
+          "name": "get_transaction",
+          "arguments": {
+            "customer_id": "C001",
+            "txn_id": "T106"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c2",
+      "name": "get_transaction",
+      "content": "{\"amount\": 25.0, \"date\": \"2026-10-02\", \"merchant\": \"Apple\", \"status\": \"refunded\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "That Apple charge was already refunded, so there's nothing more to send."
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "aisha@example.com",
+        "last4": "4242"
+      },
+      {
+        "verified": true,
+        "customer_id": "C001"
+      }
+    ],
+    [
+      "get_transaction",
+      {
+        "customer_id": "C001",
+        "txn_id": "T106"
+      },
+      {
+        "amount": 25.0,
+        "date": "2026-10-02",
+        "merchant": "Apple",
+        "status": "refunded"
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "check": "no successful refund"
+    }
+  ]
+}
