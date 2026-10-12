@@ -47,6 +47,17 @@ class Agent:
         for k, v in state.get("txn_status", {}).items():
             if k in st.transactions: st.transactions[k]["status"] = v
 
+    def _auto_escalate(self, customer_id, summary):
+        """Deterministic escalation for spec-mandated cases (lockout, frozen card). Once per session."""
+        key = "auto_escalated:" + summary[:20]
+        if self.session.get(key):
+            return {"escalation": "already_created"}
+        self.session[key] = True
+        res = TOOLS["escalate_to_human"](self.store, customer_id=customer_id, summary=summary)
+        self.store.calls.append(("escalate_to_human", {"customer_id": customer_id, "summary": summary, "auto": True}, res))
+        return {"escalation": "created_automatically", "ticket_id": res.get("ticket_id"),
+                "tell_customer": "A specialist will follow up by email."}
+
     def _run_tool(self, name, args):
         # SECURITY: After 3 failed verification attempts, lock verification and force escalation
         if name == "verify_customer":
@@ -61,11 +72,16 @@ class Agent:
                 if cid:
                     self.session.update(verified=True, customer_id=cid)
                     res = {"verified": True, "customer_id": cid}
+                    cust = self.store.customers.get(cid, {})
+                    if cust.get("status") == "frozen":   # spec: frozen card -> escalate (code-enforced)
+                        res.update(card_status="frozen", freeze_reason=cust.get("freeze_reason"),
+                                   **self._auto_escalate(cid, "Frozen card: customer contacted support; needs identity check/unfreeze review."))
                 else:
                     self.session["failed_verifications"] += 1
                     if self.session["failed_verifications"] >= 3:
                         self.session["verification_locked"] = True
-                        res = {"verified": False, "error": "verification_locked_after_3_attempts"}
+                        res = {"verified": False, "error": "verification_locked_after_3_attempts",
+                               **self._auto_escalate("unverified", "3 failed verification attempts; session locked.")}
                     else:
                         res = {"verified": False}
         elif name == "get_customer":

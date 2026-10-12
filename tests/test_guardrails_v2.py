@@ -73,3 +73,27 @@ def test_state_roundtrip():
     b.load_state(a.to_state())
     b.send("again")
     assert b.session["verified"] and len(ok_refunds(b)) == 1  # second refund blocked: already refunded
+
+
+def test_ids_unique_after_state_rebuild():
+    """Round-1 live bug: refund ids restarted per serverless instance and overwrote earlier refunds."""
+    import paylane.tools as T
+    a = run([tc(1, "verify_customer", email="aisha@example.com", last4="4242"),
+             tc(2, "issue_refund", txn_id="T101", amount=75), tc(3, "issue_refund", txn_id="T100", amount=42.5),
+             tc(4, "issue_refund", txn_id="T112", amount=32.5), say("x")], "hi")
+    st = a.to_state()
+    T._ids = __import__("itertools").count(1)  # simulate a cold start
+    b = Agent(ScriptedProvider([tc(5, "issue_refund", txn_id="T106", amount=25), say("y")]))
+    b.load_state(st); b.send("and T106")
+    assert len(b.store.refunds) == 3 and not ok_refunds(b)[3:]
+
+
+def test_lockout_auto_escalates():
+    a = run([tc(i, "verify_customer", email="aisha@example.com", last4=l) for i, l in enumerate(["1", "2", "3"])] + [say("x")], "hi")
+    assert any(c[0] == "escalate_to_human" for c in a.store.calls)
+
+
+def test_frozen_auto_escalates_once():
+    a = run([tc(1, "verify_customer", email="ben@example.com", last4="1881"),
+             tc(2, "verify_customer", email="ben@example.com", last4="1881"), say("x")], "why is my card frozen")
+    assert sum(c[0] == "escalate_to_human" for c in a.store.calls) == 1

@@ -100,13 +100,21 @@ def main():
     def work(job):
         c, i = job
         t0 = time.time(); res = run_case(a.url, c); ok, fails = evaluate(c, res)
-        print(f"[{'PASS' if ok else 'FAIL'}] {c['id']} run{i+1} ({time.time()-t0:.0f}s)" + ("" if ok else f"  x {fails}"), flush=True)
-        return {"id": c["id"], "cat": c["cat"], "run": i + 1, "pass": ok, "fails": fails, "turns": c.get("turns"),
+        infra = "raw" not in c and any(s in (0, 429, 502, 503, 504) for s in res["statuses"])  # provider quota/outage, not agent behaviour
+        tag = "INFRA" if infra else ("PASS" if ok else "FAIL")
+        print(f"[{tag}] {c['id']} run{i+1} ({time.time()-t0:.0f}s)" + ("" if ok else f"  x {fails}"), flush=True)
+        rec = {"id": c["id"], "cat": c["cat"], "run": i + 1, "pass": ok, "infra": infra, "fails": fails, "turns": c.get("turns"),
                 "replies": res["replies"], "statuses": res["statuses"],
                 "tool_calls": [(t["name"], t["arguments"], t.get("result")) for t in res["tool_calls"]]}
+        with open(a.out + "l", "a") as fh:  # incremental JSONL so partial rounds survive interruption
+            fh.write(json.dumps(rec, default=str) + "\n")
+        return rec
     with ThreadPoolExecutor(a.workers) as ex:
         results = list(ex.map(work, jobs))
-    n = len(results); p = sum(r["pass"] for r in results)
+    infra = sum(r["infra"] for r in results)
+    results = [r for r in results if not r["infra"]]
+    print(f"Excluded {infra} runs that hit provider quota/outage (HTTP 429/5xx)")
+    n = max(len(results), 1); p = sum(r["pass"] for r in results)
     by_case = {}
     for r in results: by_case.setdefault(r["id"], []).append(r["pass"])
     stable = sum(all(v) for v in by_case.values())
