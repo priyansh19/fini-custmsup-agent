@@ -103,6 +103,27 @@ python3 -m evals.run
 
 **Note:** Hosted models (OpenAI GPT, Anthropic Claude) are not yet tested. To test them, set the appropriate provider and API key as shown above and run the evals.
 
+### Live production model and results (2026-10-12)
+
+The live deploy uses **`openai/gpt-4o-mini` via OpenRouter** (`PAYLANE_PROVIDER=openrouter`, `OPENROUTER_MODEL=openai/gpt-4o-mini`).
+
+The live harness `tests/live/` sends 138 distinct cases to `/api/chat`, the same way the web UI does. Coverage: boundaries, policy, verification, adversarial, 40 multi-turn conversations, languages and malformed input.
+
+| Round | Pass rate |
+|---|---|
+| A | 130/138 (94.2%) |
+| B (2 runs each) | 266/276 (96.4%) |
+| C | 136/138 (98.6%); 137/138 cases fixed after the recheck |
+
+Remaining failure: t03. An ambiguous "I was going to ask for a refund on T100..." gets refunded.
+
+Details are in `docs/live_test_report.md` and `docs/failure_log.md`.
+
+```bash
+python -m tests.live.harness --url https://fini-custmsup-agent.vercel.app --runs 2 --workers 6 \
+  --budget-baseline <credits total_usage> --budget-cap 1.0
+```
+
 ### Web UI (Next.js + Python API)
 
 ```bash

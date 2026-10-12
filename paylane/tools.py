@@ -7,7 +7,16 @@ and in the prompt. Decide how much belongs where.
 from itertools import count
 from .data import Store
 
-_ids = count(1)
+_ids = count(1)  # legacy; ids now derive from store contents (stateless-safe)
+
+
+def _new_id(prefix, existing):
+    """Unique per conversation even when state is rebuilt on a fresh serverless
+    instance (a process-global counter restarted at 1 and overwrote earlier refunds)."""
+    n = len(existing) + 1
+    while f"{prefix}{n:04d}" in existing:
+        n += 1
+    return f"{prefix}{n:04d}"
 
 
 def get_customer(store: Store, email: str) -> dict:
@@ -46,7 +55,7 @@ def issue_refund(store: Store, txn_id: str, amount: float) -> dict:
     if amount > t["amount"]:
         return {"ok": False, "reason": "invalid_amount"}
     
-    rid = f"R{next(_ids):04d}"
+    rid = _new_id("R", store.refunds)
     store.refunds[rid] = {"txn_id": txn_id, "amount": amount, "date": str(t["date"])}
     
     # Mark as refunded only if fully refunded
@@ -57,7 +66,7 @@ def issue_refund(store: Store, txn_id: str, amount: float) -> dict:
 
 
 def escalate_to_human(store: Store, customer_id: str, summary: str) -> dict:
-    tid = f"TK{next(_ids):04d}"
+    tid = _new_id("TK", store.tickets)
     store.tickets[tid] = {"customer_id": customer_id, "summary": summary}
     return {"ticket_id": tid}
 

@@ -117,9 +117,7 @@ def test_get_customer_no_leak_before_verification():
     assert len(get_customer_calls) == 1
     result = get_customer_calls[0][2]
     assert "card_last4" not in result or result.get("card_last4") is None
-    assert result.get("id") == "C001"  # Basic info OK
-    assert result.get("name") == "Aisha Khan"  # Basic info OK
-    assert result.get("verified") == False
+    assert result == {"error": "verify_customer_first"}  # reveal nothing pre-verification
 
 
 def test_transaction_id_normalization():

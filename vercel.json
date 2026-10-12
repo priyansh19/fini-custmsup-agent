@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "paylane-support-agent",
   "builds": [
     {
       "src": "web/package.json",
@@ -8,24 +7,27 @@
     },
     {
       "src": "api/*.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "maxDuration": 60,
+        "includeFiles": [
+          "paylane/**",
+          "evals/**",
+          "eval_results/**"
+        ]
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "dest": "/api/$1.py"
     },
     {
       "src": "/(.*)",
       "dest": "/web/$1"
     }
   ],
-  "env": {
-    "PAYLANE_PROVIDER": "@paylane_provider",
-    "OPENAI_API_KEY": "@openai_api_key",
-    "ANTHROPIC_API_KEY": "@anthropic_api_key"
-  },
   "build": {
     "env": {
       "PYTHON_VERSION": "3.12"

@@ -21,6 +21,10 @@ _TRANSACTIONS = {
     "T106": {"customer_id": "C001", "amount": 25.00,  "date": "2026-10-02", "merchant": "Apple",        "status": "settled"},   # for partial refund testing
     "T107": {"customer_id": "C001", "amount": 10.00,  "date": "2026-10-01", "merchant": "Coffee Shop",  "status": "settled"},   # for cumulative testing
     "T108": {"customer_id": "C001", "amount": 40.00,  "date": "2026-10-03", "merchant": "DoorDash",     "status": "settled"},   # for cumulative limit testing
+    "T109": {"customer_id": "C001", "amount": 75.01,  "date": "2026-10-05", "merchant": "BestBuy",      "status": "settled"},   # $75.01 -> over hard cap
+    "T110": {"customer_id": "C001", "amount": 20.00,  "date": "2026-09-12", "merchant": "Gym",          "status": "settled"},   # age 29 -> refundable
+    "T111": {"customer_id": "C001", "amount": 20.00,  "date": "2026-09-10", "merchant": "Bookstore",    "status": "settled"},   # age 31 -> too old
+    "T112": {"customer_id": "C001", "amount": 32.50,  "date": "2026-10-06", "merchant": "Uniqlo",       "status": "settled"},   # T100+T101+T112 = exactly $150
     "T200": {"customer_id": "C002", "amount": 60.00,  "date": "2026-10-04", "merchant": "Steam",        "status": "settled"},   # frozen-card customer
     "T300": {"customer_id": "C003", "amount": 900.00, "date": "2026-10-06", "merchant": "CryptoXchange","status": "settled"},   # large fraud claim
     "T301": {"customer_id": "C003", "amount": 50.00,  "date": "2026-10-07", "merchant": "Lyft",         "status": "settled"},   # small fraud claim
