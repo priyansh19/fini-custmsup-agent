@@ -11,9 +11,34 @@ from paylane.agent import Agent
 from paylane.data import Store
 from paylane.providers import ScriptedProvider, from_env
 
-# Session storage (in-memory, per-function instance)
-# In production, use Redis/DynamoDB
-_sessions = {}
+import base64, hashlib, hmac
+
+# Serverless functions keep no reliable memory between requests, and a shared
+# in-memory "default" session would leak one visitor's verified chat to another.
+# So conversation state round-trips through the client as an HMAC-signed blob:
+# the client can store it but cannot forge verification, refunds or tool results.
+os.environ.setdefault("OPENROUTER_RETRIES", "3")   # stay inside the 60s function limit
+MAX_STATE_BYTES = 400_000
+
+
+def _secret() -> bytes:
+    s = os.getenv("SESSION_SECRET") or ("paylane-state:" + (os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or "dev-only"))
+    return hashlib.sha256(s.encode()).digest()
+
+
+def sign_state(state: dict) -> str:
+    raw = base64.urlsafe_b64encode(json.dumps(state, default=str).encode()).decode()
+    mac = hmac.new(_secret(), raw.encode(), hashlib.sha256).hexdigest()
+    return raw + "." + mac
+
+
+def verify_state(token):
+    if not token or not isinstance(token, str) or len(token) > MAX_STATE_BYTES or "." not in token:
+        return None
+    raw, mac = token.rsplit(".", 1)
+    if not hmac.compare_digest(mac, hmac.new(_secret(), raw.encode(), hashlib.sha256).hexdigest()):
+        return None
+    return json.loads(base64.urlsafe_b64decode(raw.encode()))
 
 
 class handler(BaseHTTPRequestHandler):
@@ -33,47 +58,43 @@ class handler(BaseHTTPRequestHandler):
         try:
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length).decode('utf-8')
-            data = json.loads(body) if body else {}
+            try:
+                data = json.loads(body) if body else {}
+            except ValueError:
+                self._send_json({'error': 'Body must be JSON: {"message": "..."}'}, 400)
+                return
+            if not isinstance(data, dict):
+                self._send_json({'error': 'Body must be a JSON object'}, 400)
+                return
             
-            message = data.get('message', '').strip()
-            if not message:
+            message = data.get('message') if isinstance(data, dict) else None
+            if not isinstance(message, str) or not message.strip():
                 self._send_json({'error': 'Message required'}, 400)
                 return
+            message = message.strip()
 
-            # Get or create session
-            session_id = self.headers.get('X-Session-ID', 'default')
-            if session_id not in _sessions:
-                # Try to get a real LLM provider, fall back to demo mode
-                try:
-                    # Check for any valid API key
-                    has_key = any([
-                        os.getenv("OPENAI_API_KEY"),
-                        os.getenv("ANTHROPIC_API_KEY"),
-                        os.getenv("OPENROUTER_API_KEY")
-                    ])
-                    if has_key:
-                        provider = from_env()
-                        demo_mode = False
-                    else:
-                        raise KeyError("No API key set")
-                except (KeyError, ModuleNotFoundError, Exception):
-                    # No API key or provider package, use scripted demo
-                    from evals.scenarios import SCENARIOS
-                    provider = ScriptedProvider(SCENARIOS[0]["script"])
-                    demo_mode = True
-                
-                _sessions[session_id] = {
-                    'agent': Agent(provider, Store()),
-                    'demo_mode': demo_mode
-                }
-            
-            session = _sessions[session_id]
-            agent = session['agent']
-            
-            # Send message to agent
-            reply = agent.send(message)
-            
-            # Return full conversation + tool calls
+            has_key = any(os.getenv(k) for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY"))
+            if has_key:
+                provider, demo_mode = from_env(), False
+            else:
+                from evals.scenarios import SCENARIOS
+                provider, demo_mode = ScriptedProvider(SCENARIOS[0]["script"]), True
+
+            agent = Agent(provider, Store())
+            if data.get('state'):
+                state = verify_state(data.get('state'))
+                if state is None:
+                    self._send_json({'error': 'Invalid or tampered session state. Please start a new chat.'}, 400)
+                    return
+                agent.load_state(state)
+
+            try:
+                reply = agent.send(message)
+            except Exception:
+                self._send_json({'error': "Our assistant is busy right now. Please try again in a moment.",
+                                 'state': data.get('state')}, 503)
+                return
+
             self._send_json({
                 'reply': reply,
                 'messages': agent.messages,
@@ -81,17 +102,15 @@ class handler(BaseHTTPRequestHandler):
                     {'name': name, 'arguments': args, 'result': result}
                     for name, args, result in agent.store.calls
                 ],
-                'demo_mode': session['demo_mode']
+                'state': sign_state(agent.to_state()),
+                'demo_mode': demo_mode
             })
 
         except Exception as e:
-            self._send_json({'error': str(e)}, 500)
+            self._send_json({'error': 'Internal error'}, 500)
 
     def do_DELETE(self):
-        """Reset session"""
-        session_id = self.headers.get('X-Session-ID', 'default')
-        if session_id in _sessions:
-            del _sessions[session_id]
+        """Stateless: the client just drops its state blob."""
         self._send_json({'status': 'reset'})
 
     def do_GET(self):

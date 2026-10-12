@@ -20,6 +20,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
   const [demoMode, setDemoMode] = useState(false);
+  const [chatState, setChatState] = useState<string | null>(null);
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
@@ -32,7 +33,7 @@ export default function Home() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage }),
+        body: JSON.stringify({ message: userMessage, state: chatState }),
       });
 
       const data = await response.json();
@@ -44,6 +45,7 @@ export default function Home() {
         ]);
       } else {
         setMessages(data.messages || []);
+        setChatState(data.state || null);
         setToolCalls(data.tool_calls || []);
         setDemoMode(data.demo_mode || false);
       }
@@ -63,6 +65,7 @@ export default function Home() {
       setMessages([]);
       setToolCalls([]);
       setDemoMode(false);
+      setChatState(null);
     } catch (error) {
       console.error('Reset error:', error);
     }
