@@ -45,9 +45,18 @@ class handler(BaseHTTPRequestHandler):
             if session_id not in _sessions:
                 # Try to get a real LLM provider, fall back to demo mode
                 try:
-                    provider = from_env()
-                    demo_mode = False
-                except (KeyError, ModuleNotFoundError):
+                    # Check for any valid API key
+                    has_key = any([
+                        os.getenv("OPENAI_API_KEY"),
+                        os.getenv("ANTHROPIC_API_KEY"),
+                        os.getenv("OPENROUTER_API_KEY")
+                    ])
+                    if has_key:
+                        provider = from_env()
+                        demo_mode = False
+                    else:
+                        raise KeyError("No API key set")
+                except (KeyError, ModuleNotFoundError, Exception):
                     # No API key or provider package, use scripted demo
                     from evals.scenarios import SCENARIOS
                     provider = ScriptedProvider(SCENARIOS[0]["script"])

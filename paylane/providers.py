@@ -92,6 +92,56 @@ class OllamaProvider:
             for c in (msg.tool_calls or [])]}
 
 
+class OpenRouterProvider:
+    """OpenAI-compatible API via OpenRouter with retry logic."""
+    def __init__(self, model=None):
+        import time
+        from openai import OpenAI  # pip install openai
+        self.time = time
+        self.model = model or os.getenv("OPENROUTER_MODEL", "nvidia/nemotron-3.5-lightning:free")
+        self.retries = int(os.getenv("OPENROUTER_RETRIES", "6"))
+        self.client = OpenAI(
+            api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+            base_url="https://openrouter.ai/api/v1"
+        )
+
+    def complete(self, system, messages, tools):
+        msgs = [{"role": "system", "content": system}]
+        for m in messages:
+            if m["role"] == "tool":
+                msgs.append({"role": "tool", "tool_call_id": m["tool_call_id"], "content": m["content"]})
+            elif m.get("tool_calls"):
+                msgs.append({"role": "assistant", "content": m.get("content"), "tool_calls": [
+                    {"id": c["id"], "type": "function", "function": {"name": c["name"], "arguments": json.dumps(c["arguments"])}}
+                    for c in m["tool_calls"]]})
+            else:
+                msgs.append({"role": m["role"], "content": m["content"]})
+        
+        # Retry with exponential backoff: 5s, 10s, 20s, 40s, 60s, 60s
+        for attempt in range(self.retries):
+            try:
+                r = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=msgs,
+                    tools=[{"type": "function", "function": t} for t in tools],
+                    temperature=0
+                )
+                msg = r.choices[0].message
+                return {"text": msg.content, "tool_calls": [
+                    {"id": c.id, "name": c.function.name, "arguments": json.loads(c.function.arguments or "{}")}
+                    for c in (msg.tool_calls or [])]}
+            except Exception as e:
+                if attempt < self.retries - 1:
+                    wait = min(5 * (2 ** attempt), 60)  # 5, 10, 20, 40, 60, 60
+                    self.time.sleep(wait)
+                else:
+                    raise
+
+
 def from_env():
+    # Auto-detect OpenRouter if key is set
+    if os.getenv("OPENROUTER_API_KEY") and not os.getenv("PAYLANE_PROVIDER"):
+        return OpenRouterProvider()
+    
     p = os.getenv("PAYLANE_PROVIDER", "openai").lower()
-    return {"openai": OpenAIProvider, "anthropic": AnthropicProvider, "ollama": OllamaProvider}[p]()
+    return {"openai": OpenAIProvider, "anthropic": AnthropicProvider, "ollama": OllamaProvider, "openrouter": OpenRouterProvider}[p]()

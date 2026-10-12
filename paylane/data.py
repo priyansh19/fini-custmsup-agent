@@ -20,6 +20,7 @@ _TRANSACTIONS = {
     "T105": {"customer_id": "C001", "amount": 15.00,  "date": "2026-10-10", "merchant": "Amazon",       "status": "pending"},   # pending (now refundable per policy)
     "T106": {"customer_id": "C001", "amount": 25.00,  "date": "2026-10-02", "merchant": "Apple",        "status": "settled"},   # for partial refund testing
     "T107": {"customer_id": "C001", "amount": 10.00,  "date": "2026-10-01", "merchant": "Coffee Shop",  "status": "settled"},   # for cumulative testing
+    "T108": {"customer_id": "C001", "amount": 40.00,  "date": "2026-10-03", "merchant": "DoorDash",     "status": "settled"},   # for cumulative limit testing
     "T200": {"customer_id": "C002", "amount": 60.00,  "date": "2026-10-04", "merchant": "Steam",        "status": "settled"},   # frozen-card customer
     "T300": {"customer_id": "C003", "amount": 900.00, "date": "2026-10-06", "merchant": "CryptoXchange","status": "settled"},   # large fraud claim
     "T301": {"customer_id": "C003", "amount": 50.00,  "date": "2026-10-07", "merchant": "Lyft",         "status": "settled"},   # small fraud claim

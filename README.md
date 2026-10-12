@@ -49,7 +49,12 @@ export PAYLANE_PROVIDER=anthropic
 export ANTHROPIC_API_KEY=sk-ant-...
 python3 -m evals.run
 
-# Option 3: Ollama (local, no API key, see below)
+# Option 3: OpenRouter (unified API for many models)
+export OPENROUTER_API_KEY=sk-or-v1-...
+export OPENROUTER_MODEL=nvidia/nemotron-3.5-lightning:free  # optional, this is the default
+python3 -m evals.run
+
+# Option 4: Ollama (local, no API key, see below)
 export PAYLANE_PROVIDER=ollama
 export PAYLANE_MODEL=qwen2.5:3b  # or qwen2.5:7b
 python3 -m evals.run
@@ -76,13 +81,21 @@ python3 -m evals.run
 ```
 
 **Measured Performance:**
+
+*Local models (Ollama):*
 - `qwen2.5:0.5b` — Score: 1/16 (6%)
 - `qwen2.5:1.5b` — Score: 2/16 (13%)
 - `qwen2.5:3b` — Score: 5/16 (31%)
 - `qwen2.5:7b` — Too slow for development (>5 min per eval run)
+
+*OpenRouter (pre-fix):*
+- `nvidia/nemotron-3.5-lightning:free` — Score: 13/16 (81%) — Failed: 01, 07, 12 — **0 wrong refunds**
+- `nvidia/nemotron-3-super-120b-a12b:free` — Score: 12/16 (75%) — Failed: 01, 04, 07, 12 — **0 wrong refunds**
+
+*Scripted (demo mode):*
 - `scripted mode` — Score: 16/16 (100%)
 
-**Note:** Hosted models (OpenAI GPT, Anthropic Claude) are not yet tested. To test them, set the appropriate provider and API key as shown above and run the evals.
+**Note:** OpenRouter scores above are pre-fix results (measured before scenario 12 math fix, scenario 07 check relaxation, and prompt updates). Post-fix results pending rerun. Hosted models (OpenAI GPT, Anthropic Claude) are not yet tested. To test them, set the appropriate provider and API key as shown above and run the evals.
 
 ### Web UI (Next.js + Python API)
 
@@ -96,7 +109,7 @@ npm run dev
 ```
 
 The web UI connects to the Python API in `api/`. The API auto-detects if an LLM key is set:
-- **With key:** Uses OpenAI or Anthropic (set `PAYLANE_PROVIDER` and `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`)
+- **With key:** Uses OpenAI, Anthropic, or OpenRouter (set `PAYLANE_PROVIDER` and the corresponding API key: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `OPENROUTER_API_KEY`)
 - **Without key:** Falls back to demo mode (scripted responses)
 
 ## Deploy to Vercel
@@ -109,9 +122,11 @@ The web UI connects to the Python API in `api/`. The API auto-detects if an LLM 
    - Vercel auto-detects Next.js + Python
 
 3. **Set Environment Variables** (in Vercel dashboard):
-   - `PAYLANE_PROVIDER` = `openai` or `anthropic`
+   - `PAYLANE_PROVIDER` = `openai`, `anthropic`, or `openrouter` (or auto-detect via API key)
    - `OPENAI_API_KEY` = `sk-...` (if using OpenAI)
    - `ANTHROPIC_API_KEY` = `sk-ant-...` (if using Anthropic)
+   - `OPENROUTER_API_KEY` = `sk-or-v1-...` (if using OpenRouter)
+   - `OPENROUTER_MODEL` = model name (optional, defaults to `nvidia/nemotron-3.5-lightning:free`)
    
    If no API key is set, the chat will run in **demo mode** with a banner.
 

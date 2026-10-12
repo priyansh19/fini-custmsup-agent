@@ -193,12 +193,23 @@ These are architectural limitations, not prompt-engineering issues.
 - qwen2.5:3b — 5/16 (31%)
 - qwen2.5:7b — Too slow for practical testing
 
+**Tested via OpenRouter (pre-fix results):**
+- `nvidia/nemotron-3.5-lightning:free` — 13/16 (81%) — Failed: 01, 07, 12 — **0 wrong refunds**
+- `nvidia/nemotron-3-super-120b-a12b:free` — 12/16 (75%) — Failed: 01, 04, 07, 12 — **0 wrong refunds**
+
+**Note:** OpenRouter scores are pre-fix benchmarks measured before:
+1. Scenario 12 cumulative limit math fix ($127.50 → $157.50 to actually exceed cap)
+2. Scenario 07 check relaxation (now accepts asking for email/last4 without strict `?` requirement)
+3. Prompt updates (duplicate charge handling + dynamic date injection)
+
+Post-fix results pending rerun.
+
 **Not yet tested:**
 - OpenAI models (GPT-4o, GPT-4o-mini, GPT-3.5-turbo)
 - Anthropic models (Claude Sonnet, Claude Opus)
 - Other Qwen sizes (14B, 32B, etc.)
 
-**To test additional models:** Set `PAYLANE_PROVIDER` and appropriate API key, then run `python3 -m evals.run`
+**To test additional models:** Set `PAYLANE_PROVIDER` and appropriate API key, or set `OPENROUTER_API_KEY`, then run `python3 -m evals.run`
 
 ---
 
@@ -215,10 +226,11 @@ These are architectural limitations, not prompt-engineering issues.
 
 When deploying with a real LLM:
 
-1. ✅ Set `PAYLANE_PROVIDER=openai` or `anthropic`
-2. ✅ Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`
+1. ✅ Set `PAYLANE_PROVIDER=openai`, `anthropic`, or `openrouter` (or auto-detect via API key)
+2. ✅ Set `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `OPENROUTER_API_KEY`
 3. ✅ Run `python3 -m evals.run` (measure actual score with your chosen model)
 4. ✅ Review transcripts for any policy violations
 5. ✅ Test with real edge cases (not just eval scenarios)
 6. ⚠️ If using Ollama locally: qwen2.5:3b minimum, measured 31% pass rate (5/16)
-7. ⚠️ Hosted models (GPT-4, Claude) not yet tested — set API key and run evals to measure
+7. ⚠️ If using OpenRouter: nvidia/nemotron-3.5-lightning:free scored 81% pre-fix (13/16, 0 wrong refunds)
+8. ⚠️ Hosted models (GPT-4, Claude) not yet tested — set API key and run evals to measure

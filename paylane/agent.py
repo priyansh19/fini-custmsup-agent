@@ -1,6 +1,6 @@
 """Agent loop: LLM -> tool calls -> guardrail -> tool results -> LLM, until text reply."""
 import json
-from .data import Store
+from .data import Store, TODAY
 from .tools import TOOLS, TOOL_SPECS
 from .policy import refund_allowed, check_verification
 from .prompt import SYSTEM_PROMPT
@@ -15,7 +15,9 @@ MAX_STEPS = 8
 
 class Agent:
     def __init__(self, provider, store: Store | None = None, system_prompt: str = SYSTEM_PROMPT, guardrail: bool = True):
-        self.provider, self.store, self.system = provider, store or Store(), system_prompt
+        self.provider, self.store = provider, store or Store()
+        # Inject today's date dynamically into the prompt
+        self.system = system_prompt.replace("{{TODAY}}", TODAY.strftime("%Y-%m-%d"))
         self.guardrail = guardrail
         self.messages, self.session = [], {"verified": False, "customer_id": None, "failed_verifications": 0}
 
