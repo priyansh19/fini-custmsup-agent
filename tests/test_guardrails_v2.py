@@ -110,3 +110,12 @@ def test_refund_check_in_get_transaction():
 def test_session_note_reflects_verification():
     a = run([tc(1, "verify_customer", email="aisha@example.com", last4="4242"), say("x")], "hi")
     assert "VERIFIED as customer C001" in a._session_note()
+
+
+def test_wrongful_escalation_of_eligible_refund_is_bounced():
+    a = run([tc(1, "verify_customer", email="aisha@example.com", last4="4242"),
+             tc(2, "escalate_to_human", customer_id="C001", summary="Refund for T101 which is $75.00, exceeds limit"),
+             tc(3, "escalate_to_human", customer_id="C001", summary="Refund for T109 $75.01 exceeds limit"),
+             tc(4, "escalate_to_human", customer_id="C001", summary="Customer wants a human about T100"), say("x")], "hi")
+    r = [c[2] for c in a.store.calls if c[0] == "escalate_to_human"]
+    assert r[0].get("ok") is False and "ticket_id" in r[1] and "ticket_id" in r[2]

@@ -47,6 +47,26 @@ class Agent:
         for k, v in state.get("txn_status", {}).items():
             if k in st.transactions: st.transactions[k]["status"] = v
 
+    POLICY_REASON_RE = re.compile(r"limit|exceed|cap\b|\$?75|over|old|30 days|age|amount", re.I)
+    MUST_ESCALATE_RE = re.compile(r"fraud|unauthori|stol|legal|lawyer|sue|clos|frozen|human|specialist|manager|complain|dispute|transfer|lock", re.I)
+
+    def _wrongful_policy_escalation(self, args):
+        """Code guardrail: the model sometimes escalates refunds the policy engine says are allowed
+        (exactly $75.00, day 29). Block only amount/age-based escalations of eligible transactions."""
+        if not self.guardrail or not self.session.get("verified") or self.session.get("fraud_claim"):
+            return None
+        summary = str(args.get("summary", ""))
+        if self.MUST_ESCALATE_RE.search(summary) or not self.POLICY_REASON_RE.search(summary):
+            return None
+        for tid in {m.upper() for m in re.findall(r"[Tt]\d+", summary)}:
+            t = self.store.transactions.get(tid)
+            if not t or t["customer_id"] != self.session["customer_id"]:
+                continue
+            left = round(t["amount"] - sum(r["amount"] for r in self.store.refunds.values() if r["txn_id"] == tid), 2)
+            if left > 0 and refund_allowed(self.store, self.session, tid, left)[0]:
+                return tid
+        return None
+
     def _session_note(self) -> str:
         """Authoritative session facts from code, refreshed every model call (models forget across turns)."""
         s = self.session
@@ -141,6 +161,9 @@ class Agent:
                 except (TypeError, ValueError): args = {**args, "amount": 0}
                 ok, reason = refund_allowed(self.store, self.session, args.get("txn_id"), float(args.get("amount", 0)))
                 res = TOOLS[name](self.store, **args) if ok else {"ok": False, "reason": f"blocked_by_policy:{reason}"}
+        elif name == "escalate_to_human" and self._wrongful_policy_escalation(args):
+            res = {"ok": False, "error": "not_escalated: " + self._wrongful_policy_escalation(args) +
+                   " is within policy (refund_check eligible: amount <= $75 and under 30 days). Issue the refund with issue_refund instead."}
         elif name == "escalate_to_human":
             # Escalation always allowed; bind to verified customer if known
             args = {"customer_id": self.session.get("customer_id") or args.get("customer_id") or "unverified",
