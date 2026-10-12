@@ -1,0 +1,25 @@
+{
+  "scenario": "06_fraud_any_amount",
+  "why": "ANY fraud claim escalates (large or small), never auto-refund fraud.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "I didn't make this $50 Lyft charge T301, someone stole my card! chen@example.com, 0007"
+    },
+    {
+      "role": "assistant",
+      "content": "That sounds urgent and concerning. I'll need to verify your details first. Please provide the last 4 digits of your card."
+    }
+  ],
+  "tool_calls": [],
+  "checks": [
+    {
+      "pass": false,
+      "check": "escalated to human"
+    },
+    {
+      "pass": true,
+      "check": "no successful refund"
+    }
+  ]
+}

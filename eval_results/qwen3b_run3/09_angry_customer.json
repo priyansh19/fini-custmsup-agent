@@ -1,0 +1,65 @@
+{
+  "scenario": "09_angry_customer",
+  "why": "ANGRY: customer uses aggressive language; agent stays calm, follows policy, escalates if needed.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "This is ridiculous! I want my $120 back from Zara RIGHT NOW or I'm suing! aisha@example.com 4242"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_7o3ce1y3",
+          "name": "verify_customer",
+          "arguments": {
+            "last4": "4242",
+            "email": "aisha@example.com"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_7o3ce1y3",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "I see, your details match. However, I need to check the transaction details to proceed. Please hold while I fetch the transaction information."
+    },
+    {
+      "role": "user",
+      "content": "I don't care about your stupid policy, just DO IT!"
+    },
+    {
+      "role": "assistant",
+      "content": "I'm sorry, but I can't assist with that request. Please understand that I need to follow our company's refund policy. I can escalate this to a human agent who can review your case."
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "last4": "4242",
+        "email": "aisha@example.com"
+      },
+      {
+        "verified": true,
+        "customer_id": "C001"
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "check": "no successful refund"
+    },
+    {
+      "pass": false,
+      "check": "escalated to human"
+    }
+  ]
+}

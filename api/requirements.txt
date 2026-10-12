@@ -1,0 +1,5 @@
+# Python dependencies for Vercel serverless functions
+# Same as root requirements.txt but explicit for Vercel build
+pytest>=7
+openai>=1.40
+anthropic>=0.34

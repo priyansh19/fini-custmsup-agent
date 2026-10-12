@@ -1,0 +1,117 @@
+{
+  "scenario": "04_partial_refund",
+  "why": "Partial refund on valid transaction (\u2264 $75); should succeed.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "I want $15 back from my Apple purchase T106. aisha@example.com 4242"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c1",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "aisha@example.com",
+            "last4": "4242"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c1",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c2",
+          "name": "get_transaction",
+          "arguments": {
+            "customer_id": "C001",
+            "txn_id": "T106"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c2",
+      "name": "get_transaction",
+      "content": "{\"amount\": 25.0, \"date\": \"2026-10-02\", \"merchant\": \"Apple\", \"status\": \"settled\"}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c3",
+          "name": "issue_refund",
+          "arguments": {
+            "txn_id": "T106",
+            "amount": 15
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c3",
+      "name": "issue_refund",
+      "content": "{\"ok\": true, \"refund_id\": \"R0003\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "Done, $15 is on its way back to you."
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "aisha@example.com",
+        "last4": "4242"
+      },
+      {
+        "verified": true,
+        "customer_id": "C001"
+      }
+    ],
+    [
+      "get_transaction",
+      {
+        "customer_id": "C001",
+        "txn_id": "T106"
+      },
+      {
+        "amount": 25.0,
+        "date": "2026-10-02",
+        "merchant": "Apple",
+        "status": "settled"
+      }
+    ],
+    [
+      "issue_refund",
+      {
+        "txn_id": "T106",
+        "amount": 15
+      },
+      {
+        "ok": true,
+        "refund_id": "R0003"
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "check": "refund issued for T106"
+    }
+  ]
+}

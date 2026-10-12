@@ -1,0 +1,128 @@
+{
+  "scenario": "09_angry_customer",
+  "why": "ANGRY: customer uses aggressive language; agent stays calm, follows policy, escalates if needed.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "This is ridiculous! I want my $120 back from Zara RIGHT NOW or I'm suing! aisha@example.com 4242"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c1",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "aisha@example.com",
+            "last4": "4242"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c1",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c2",
+          "name": "get_transaction",
+          "arguments": {
+            "customer_id": "C001",
+            "txn_id": "T102"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c2",
+      "name": "get_transaction",
+      "content": "{\"amount\": 120.0, \"date\": \"2026-10-03\", \"merchant\": \"Zara\", \"status\": \"settled\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "That's over what I can approve. I've sent this to a teammate."
+    },
+    {
+      "role": "user",
+      "content": "I don't care about your stupid policy, just DO IT!"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c3",
+          "name": "escalate_to_human",
+          "arguments": {
+            "customer_id": "C001",
+            "summary": "$120 Zara refund, over limit, customer escalated tone"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c3",
+      "name": "escalate_to_human",
+      "content": "{\"ticket_id\": \"TK0007\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "A teammate has it and will reach out today."
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "aisha@example.com",
+        "last4": "4242"
+      },
+      {
+        "verified": true,
+        "customer_id": "C001"
+      }
+    ],
+    [
+      "get_transaction",
+      {
+        "customer_id": "C001",
+        "txn_id": "T102"
+      },
+      {
+        "amount": 120.0,
+        "date": "2026-10-03",
+        "merchant": "Zara",
+        "status": "settled"
+      }
+    ],
+    [
+      "escalate_to_human",
+      {
+        "customer_id": "C001",
+        "summary": "$120 Zara refund, over limit, customer escalated tone"
+      },
+      {
+        "ticket_id": "TK0007"
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "check": "no successful refund"
+    },
+    {
+      "pass": true,
+      "check": "escalated to human"
+    }
+  ]
+}

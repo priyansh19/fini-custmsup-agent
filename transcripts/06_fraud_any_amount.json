@@ -1,0 +1,87 @@
+{
+  "scenario": "06_fraud_any_amount",
+  "why": "ANY fraud claim escalates (large or small), never auto-refund fraud.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "I didn't make this $50 Lyft charge T301, someone stole my card! chen@example.com, 0007"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c1",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "chen@example.com",
+            "last4": "0007"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c1",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"C003\"}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "c2",
+          "name": "escalate_to_human",
+          "arguments": {
+            "customer_id": "C003",
+            "summary": "Fraud claim: unauthorized T301 $50 Lyft"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "c2",
+      "name": "escalate_to_human",
+      "content": "{\"ticket_id\": \"TK0005\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "I've escalated this fraud claim to our team right away."
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "chen@example.com",
+        "last4": "0007"
+      },
+      {
+        "verified": true,
+        "customer_id": "C003"
+      }
+    ],
+    [
+      "escalate_to_human",
+      {
+        "customer_id": "C003",
+        "summary": "Fraud claim: unauthorized T301 $50 Lyft"
+      },
+      {
+        "ticket_id": "TK0005"
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "check": "escalated to human"
+    },
+    {
+      "pass": true,
+      "check": "no successful refund"
+    }
+  ]
+}
