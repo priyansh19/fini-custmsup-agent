@@ -118,7 +118,7 @@ class handler(BaseHTTPRequestHandler):
 
             self._send_json({
                 'reply': reply,
-                'messages': agent.messages,
+                'messages': [m for m in agent.messages if m.get('role') in ('user', 'assistant')],
                 'tool_calls': [
                     {'name': name, 'arguments': args, 'result': result}
                     for name, args, result in agent.store.calls

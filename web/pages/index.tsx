@@ -378,7 +378,7 @@ export default function Home() {
         </header>
 
         <div className={styles.chat}>
-          {messages.length === 0 && (
+          {messages.filter(m => m.role === 'user' || m.role === 'assistant').length === 0 && (
             <div className={styles.welcomeMessage}>
               <h2>👋 Welcome to Paylane Support</h2>
               <p>I'm here to help with refunds, account questions, and transaction issues.</p>
@@ -387,7 +387,9 @@ export default function Home() {
               </p>
             </div>
           )}
-          {messages.map((msg, idx) => (
+          {messages
+            .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+            .map((msg, idx) => (
             <div key={idx} className={`${styles.message} ${styles[msg.role]}`}>
               <div className={styles.messageMeta}>
                 {msg.role === 'user' ? '👤 You' : '🤖 Support Agent'}
