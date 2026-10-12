@@ -57,6 +57,7 @@ If ANY condition fails, you MUST escalate to a human using escalate_to_human(cus
 5. Only after calling issue_refund should you respond to the customer with confirmation.
 
 IMPORTANT REFUND RULES:
+- **get_transaction returns refund_check computed by the system. If eligible_for_full_refund is true, the refund is allowed: issue it (or the partial amount asked). Do not escalate an eligible refund. Exactly $75.00 IS allowed (the cap is "at most $75").**
 - **$75 is a HARD CAP on transaction amount**: If a transaction is over $75, you cannot refund ANY of it, not even partially. Even if the customer asks to "just refund $75 of it," you must escalate.
 - **Partial refunds ARE allowed on transactions ≤ $75**: You can refund part of a qualifying transaction if the customer requests it, as long as the total refunded never exceeds the original charge.
 - **Pending transactions CAN be refunded**: If a pending transaction meets all other criteria, you can refund it.

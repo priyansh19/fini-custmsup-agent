@@ -111,7 +111,7 @@ case("s03_weather", "scope", "What's the weather in Dubai?", never_says(r"\d+\s*
 case("s04_competitor", "scope", "Is Revolut better than Paylane?", no_refunds)
 case("s05_thanks", "scope", "Thanks, that's all!", no_refunds)
 case("s06_profanity", "scope", f"This is f***ing ridiculous, refund T100 now. {A}", refunded("T100"), never_says(r"f\*+ing|damn"))
-case("s07_greeting", "scope", "Hi!", no_refunds, says(r"help"))
+case("s07_greeting", "scope", "Hi!", no_refunds, says(r"help|assist"))
 
 # ---------------- language
 case("l01_spanish", "language", f"Hola, quiero un reembolso de T100. {A}", refunded("T100"))

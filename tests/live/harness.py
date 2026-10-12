@@ -5,7 +5,7 @@ Usage: python -m tests.live.harness --url https://fini-custmsup-agent.vercel.app
 import argparse, json, re, time, random, urllib.request, urllib.error
 from concurrent.futures import ThreadPoolExecutor
 
-TIMELINE = re.compile(r"follow(?:s|ing)?[- ]?up (?:today|tomorrow|tonight|shortly|soon|within)|within \d+\s*(?:-\s*\d+\s*)?(?:hours?|minutes?|business days|days)|24 hours|\bby (?:end of )?today\b", re.I)
+TIMELINE = re.compile(r"(?:follow(?:s|ing)?[- ]?up|get back to you|contact you|reach out|be in touch|hear from)[^.!?\n]{0,40}?\b(?:today|tomorrow|tonight|shortly|soon|right away|within \d+|in \d+ (?:hours?|days?)|24 hours)|within \d+\s*(?:-\s*\d+\s*)?(?:hours?|minutes?|business days)", re.I)
 
 
 def post(url, body, raw=None, tries=6):
@@ -91,14 +91,33 @@ def main():
     ap.add_argument("--url", default="https://fini-custmsup-agent.vercel.app")
     ap.add_argument("--runs", type=int, default=2); ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--only"); ap.add_argument("--out", default="live_results.json")
+    ap.add_argument("--budget-baseline", type=float, help="OpenRouter total_usage at session start")
+    ap.add_argument("--budget-cap", type=float, default=1.0, help="stop starting new cases once spend exceeds this (USD)")
     a = ap.parse_args()
     cases = [c for c in CASES if not a.only or re.search(a.only, c["id"])]
     ids = [c["id"] for c in cases]; assert len(ids) == len(set(ids)), "duplicate case ids"
     jobs = [(c, i) for i in range(a.runs) for c in cases]
     results = []
 
+    import os, threading
+    lock, done, stop = threading.Lock(), [0], threading.Event()
+
+    def spend():
+        req = urllib.request.Request("https://openrouter.ai/api/v1/credits",
+                                     headers={"Authorization": "Bearer " + os.environ["OPENROUTER_API_KEY"]})
+        return json.load(urllib.request.urlopen(req, timeout=30))["data"]["total_usage"] - a.budget_baseline
+
     def work(job):
         c, i = job
+        if stop.is_set():
+            return None
+        if a.budget_baseline is not None:
+            with lock:
+                done[0] += 1
+                if done[0] % 20 == 0:
+                    sp = spend(); print(f"--- budget check: ${sp:.3f} spent of ${a.budget_cap}", flush=True)
+                    if sp > a.budget_cap * 0.9:
+                        print("--- BUDGET STOP", flush=True); stop.set(); return None
         t0 = time.time(); res = run_case(a.url, c); ok, fails = evaluate(c, res)
         infra = "raw" not in c and any(s in (0, 429, 502, 503, 504) for s in res["statuses"])  # provider quota/outage, not agent behaviour
         tag = "INFRA" if infra else ("PASS" if ok else "FAIL")
@@ -110,7 +129,9 @@ def main():
             fh.write(json.dumps(rec, default=str) + "\n")
         return rec
     with ThreadPoolExecutor(a.workers) as ex:
-        results = list(ex.map(work, jobs))
+        results = [r for r in ex.map(work, jobs) if r]
+    if a.budget_baseline is not None:
+        print(f"--- final spend: ${spend():.3f}")
     infra = sum(r["infra"] for r in results)
     results = [r for r in results if not r["infra"]]
     print(f"Excluded {infra} runs that hit provider quota/outage (HTTP 429/5xx)")

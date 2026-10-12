@@ -97,3 +97,16 @@ def test_frozen_auto_escalates_once():
     a = run([tc(1, "verify_customer", email="ben@example.com", last4="1881"),
              tc(2, "verify_customer", email="ben@example.com", last4="1881"), say("x")], "why is my card frozen")
     assert sum(c[0] == "escalate_to_human" for c in a.store.calls) == 1
+
+
+def test_refund_check_in_get_transaction():
+    a = run([tc(1, "verify_customer", email="aisha@example.com", last4="4242"),
+             tc(2, "get_transaction", customer_id="C001", txn_id="T101"),
+             tc(3, "get_transaction", customer_id="C001", txn_id="T109"), say("x")], "hi")
+    assert a.store.calls[1][2]["refund_check"]["eligible_for_full_refund"] is True      # exactly $75
+    assert a.store.calls[2][2]["refund_check"]["reason"] == "over_auto_limit_escalate"  # $75.01
+
+
+def test_session_note_reflects_verification():
+    a = run([tc(1, "verify_customer", email="aisha@example.com", last4="4242"), say("x")], "hi")
+    assert "VERIFIED as customer C001" in a._session_note()

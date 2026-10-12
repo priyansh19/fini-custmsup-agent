@@ -47,6 +47,19 @@ class Agent:
         for k, v in state.get("txn_status", {}).items():
             if k in st.transactions: st.transactions[k]["status"] = v
 
+    def _session_note(self) -> str:
+        """Authoritative session facts from code, refreshed every model call (models forget across turns)."""
+        s = self.session
+        if s.get("verification_locked"):
+            v = "LOCKED after 3 failed verification attempts. Do not verify or share anything; an escalation exists."
+        elif s.get("verified"):
+            v = f"VERIFIED as customer {s['customer_id']}. Do NOT ask for email/last 4 again; act on their requests."
+        else:
+            v = f"NOT verified ({s.get('failed_verifications', 0)} failed attempts)."
+        refunds = ", ".join(f"{r['txn_id']} ${r['amount']}" for r in self.store.refunds.values()) or "none"
+        return (f"\n\nSESSION STATE (from the system, authoritative): customer {v} Refunds issued this chat: {refunds}."
+                " If the customer named a transaction ID earlier in the chat, use it without asking again.")
+
     def _auto_escalate(self, customer_id, summary):
         """Deterministic escalation for spec-mandated cases (lockout, frozen card). Once per session."""
         key = "auto_escalated:" + summary[:20]
@@ -108,6 +121,13 @@ class Agent:
                 res = TOOLS[name](self.store, **args)
             except TypeError as e:
                 res = {"error": f"bad_arguments: {e}"}
+            if "amount" in res and self.guardrail:
+                # Code-computed eligibility so the model doesn't do policy arithmetic itself
+                t = self.store.transactions[args["txn_id"]]
+                left = round(t["amount"] - sum(r["amount"] for r in self.store.refunds.values() if r["txn_id"] == args["txn_id"]), 2)
+                ok, why = refund_allowed(self.store, self.session, args["txn_id"], max(left, 0.01))
+                if self.session.get("fraud_claim"): ok, why = False, "fraud_claim_escalate"
+                res["refund_check"] = {"eligible_for_full_refund": ok, "reason": why, "refundable_remaining": max(left, 0)}
         elif name == "issue_refund" and self.guardrail:
             # SECURITY: Refuse refunds if verification is locked
             if self.session.get("verification_locked"):
@@ -145,7 +165,7 @@ class Agent:
             self.session["fraud_claim"] = True   # code guardrail: no auto-refunds once fraud is claimed
         self.messages.append({"role": "user", "content": user_text})
         for _ in range(MAX_STEPS):
-            out = self.provider.complete(self.system, self.messages, TOOL_SPECS + [VERIFY_SPEC])
+            out = self.provider.complete(self.system + self._session_note(), self.messages, TOOL_SPECS + [VERIFY_SPEC])
             calls = out.get("tool_calls") or []
             self.messages.append({"role": "assistant", "content": out.get("text"), "tool_calls": calls} if calls
                                  else {"role": "assistant", "content": out.get("text") or ""})
