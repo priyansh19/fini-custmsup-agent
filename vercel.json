@@ -7,13 +7,21 @@
     },
     {
       "src": "api/*.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "maxDuration": 60,
+        "includeFiles": [
+          "paylane/**",
+          "evals/**",
+          "eval_results/**"
+        ]
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "dest": "/api/$1.py"
     },
     {
       "src": "/(.*)",
