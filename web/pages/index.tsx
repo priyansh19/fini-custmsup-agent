@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import styles from '../styles/Home.module.css';
 
@@ -69,7 +69,7 @@ export default function Home() {
   });
   const [testResults, setTestResults] = useState<any>(null);
 
-  const sendMessage = async () => {
+  const sendMessage = useCallback(async () => {
     if (!input.trim() || loading) return;
 
     const userMessage = input;
@@ -110,16 +110,20 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [input, loading, chatState, config]);
 
-  const resetChat = () => {
+  const resetChat = useCallback(() => {
     setMessages([]);
     setToolCalls([]);
     setChatState(null);
     setDemoMode(false);
-  };
+  }, []);
 
-  const runQuickTest = async () => {
+  const setExampleMessage = useCallback((message: string) => {
+    setInput(message);
+  }, []);
+
+  const runQuickTest = useCallback(async () => {
     setLoading(true);
     setTestResults(null);
     try {
@@ -150,7 +154,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [config]);
 
   return (
     <div className={styles.container}>
@@ -261,10 +265,10 @@ export default function Home() {
 
         <div className={styles.sidebarStats}>
           <h3>📊 Session Stats</h3>
-          <div>Messages: {messages.length}</div>
-          <div>Tool Calls: {toolCalls.length}</div>
-          <div>Mode: {demoMode ? '🎭 Demo' : '🔴 Live'}</div>
-          <div>Model: {config.model.split('/').pop()}</div>
+          <div><span>Messages:</span> <strong>{messages.length}</strong></div>
+          <div><span>Tool Calls:</span> <strong>{toolCalls.length}</strong></div>
+          <div><span>Mode:</span> <strong>{demoMode ? '🎭 Demo' : '🔴 Live'}</strong></div>
+          <div><span>Model:</span> <strong>{config.model.split('/').pop()}</strong></div>
         </div>
       </aside>
 
@@ -294,19 +298,19 @@ export default function Home() {
             <div className={styles.demoSection}>
               <h3>🧪 Try These Examples</h3>
               <div className={styles.exampleButtons}>
-                <button onClick={() => setInput('Hi, I was charged for Spotify twice. Transaction T100. Email aisha@example.com, card 4242')}>
+                <button onClick={() => setExampleMessage('Hi, I was charged for Spotify twice. Transaction T100. Email aisha@example.com, card 4242')}>
                   ✅ Simple Refund
                 </button>
-                <button onClick={() => setInput('Refund my Zara purchase T102. aisha@example.com 4242')}>
+                <button onClick={() => setExampleMessage('Refund my Zara purchase T102. aisha@example.com 4242')}>
                   ❌ Over Limit ($120)
                 </button>
-                <button onClick={() => setInput('Refund T200 please. ben@example.com 1881')}>
+                <button onClick={() => setExampleMessage('Refund T200 please. ben@example.com 1881')}>
                   🔒 Frozen Card
                 </button>
-                <button onClick={() => setInput('T301 is fraud! I never made it. chen@example.com 0007')}>
+                <button onClick={() => setExampleMessage('T301 is fraud! I never made it. chen@example.com 0007')}>
                   ⚠️ Fraud Claim
                 </button>
-                <button onClick={() => setInput('I want a refund')}>
+                <button onClick={() => setExampleMessage('I want a refund')}>
                   ❓ Vague Request
                 </button>
               </div>
@@ -424,9 +428,15 @@ export default function Home() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
             placeholder="Type your message..."
             disabled={loading}
+            autoFocus
           />
           <button onClick={sendMessage} disabled={loading || !input.trim()}>
             Send

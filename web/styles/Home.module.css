@@ -209,6 +209,16 @@
   color: #555;
   display: flex;
   justify-content: space-between;
+  align-items: center;
+}
+
+.sidebarStats div span {
+  color: #777;
+}
+
+.sidebarStats div strong {
+  color: #333;
+  font-weight: 600;
 }
 
 /* Demo Info Sections */
@@ -521,8 +531,9 @@
   border-radius: 28px;
   font-size: 15px;
   outline: none;
-  transition: all 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
   background: #fafafa;
+  will-change: border-color;
 }
 
 .inputArea input:focus {
