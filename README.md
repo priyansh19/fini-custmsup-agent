@@ -75,13 +75,14 @@ export PAYLANE_MODEL=qwen2.5:3b
 python3 -m evals.run
 ```
 
-**Performance with Ollama + Qwen models:**
-- `qwen2.5:0.5b` — Score: 1/16 (6%) — Unusable
-- `qwen2.5:1.5b` — Score: 2/16 (13%) — Unusable
-- `qwen2.5:3b` — Score: 5/16 (31%) — Marginally usable for testing
+**Measured Performance:**
+- `qwen2.5:0.5b` — Score: 1/16 (6%)
+- `qwen2.5:1.5b` — Score: 2/16 (13%)
+- `qwen2.5:3b` — Score: 5/16 (31%)
 - `qwen2.5:7b` — Too slow for development (>5 min per eval run)
+- `scripted mode` — Score: 16/16 (100%)
 
-**Recommendation:** Use Ollama + qwen2.5:3b for quick local testing without API costs, but expect ~30% pass rate. For production or reliable testing, use GPT-4o-mini or Claude Sonnet 3.5 (expect 90-100% pass rate).
+**Note:** Hosted models (OpenAI GPT, Anthropic Claude) are not yet tested. To test them, set the appropriate provider and API key as shown above and run the evals.
 
 ### Web UI (Next.js + Python API)
 

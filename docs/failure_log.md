@@ -8,7 +8,7 @@
 - qwen2.5:3b — Score: **4/12** after prompt hardening (marginally usable)
 - qwen2.5:7b — Too slow for development testing (>5 min for 12 scenarios)
 
-**Recommended:** qwen2.5:3b is the smallest model that shows any competence with tool calling, but still fails 67% of scenarios. For production, use GPT-4o-mini or Claude Sonnet 3.5.
+**Note:** qwen2.5:3b is the smallest tested model that shows any competence with tool calling, but still fails 67% of scenarios. Hosted models (OpenAI GPT, Anthropic Claude) have not yet been tested.
 
 ---
 
@@ -185,21 +185,20 @@ These are architectural limitations, not prompt-engineering issues.
 
 ---
 
-## Recommended Models for Production
+## Model Testing Summary
 
-Based on Fini's requirements (tool calling, policy adherence, security):
+**Tested locally with Ollama:**
+- qwen2.5:0.5b — 1/16 (6%)
+- qwen2.5:1.5b — 2/16 (13%)
+- qwen2.5:3b — 5/16 (31%)
+- qwen2.5:7b — Too slow for practical testing
 
-**Best:**
-- GPT-4o / GPT-4o-mini (OpenAI)
-- Claude Sonnet 3.5 / Claude Opus 3.5 (Anthropic)
+**Not yet tested:**
+- OpenAI models (GPT-4o, GPT-4o-mini, GPT-3.5-turbo)
+- Anthropic models (Claude Sonnet, Claude Opus)
+- Other Qwen sizes (14B, 32B, etc.)
 
-**Good enough:**
-- GPT-3.5-turbo with aggressive prompt hardening
-- Qwen2.5:14B or larger (if self-hosted with GPU)
-
-**Not recommended:**
-- Any model < 3B parameters
-- Models without explicit tool-calling training
+**To test additional models:** Set `PAYLANE_PROVIDER` and appropriate API key, then run `python3 -m evals.run`
 
 ---
 
@@ -218,8 +217,8 @@ When deploying with a real LLM:
 
 1. ✅ Set `PAYLANE_PROVIDER=openai` or `anthropic`
 2. ✅ Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`
-3. ✅ Run `python3 -m evals.run` (should get 10-12/12 with GPT-4o or Claude)
+3. ✅ Run `python3 -m evals.run` (measure actual score with your chosen model)
 4. ✅ Review transcripts for any policy violations
 5. ✅ Test with real edge cases (not just eval scenarios)
-6. ⚠️ If using Ollama locally: qwen2.5:3b minimum, expect 30-50% pass rate
-7. ⚠️ If score < 10/12 with GPT-4/Claude: check API key, model name, prompt updates
+6. ⚠️ If using Ollama locally: qwen2.5:3b minimum, measured 31% pass rate (5/16)
+7. ⚠️ Hosted models (GPT-4, Claude) not yet tested — set API key and run evals to measure
