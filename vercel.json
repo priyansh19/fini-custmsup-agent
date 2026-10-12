@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "paylane-support-agent",
   "builds": [
     {
       "src": "web/package.json",
@@ -21,11 +20,6 @@
       "dest": "/web/$1"
     }
   ],
-  "env": {
-    "PAYLANE_PROVIDER": "@paylane_provider",
-    "OPENAI_API_KEY": "@openai_api_key",
-    "ANTHROPIC_API_KEY": "@anthropic_api_key"
-  },
   "build": {
     "env": {
       "PYTHON_VERSION": "3.12"
