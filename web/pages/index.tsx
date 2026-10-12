@@ -74,6 +74,9 @@ export default function Home() {
 
     const userMessage = input;
     setInput('');
+    
+    // Immediately show user message
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setLoading(true);
 
     try {
@@ -91,10 +94,10 @@ export default function Home() {
       
       if (data.error) {
         setMessages(prev => [...prev, 
-          { role: 'user', content: userMessage },
           { role: 'assistant', content: `Error: ${data.error}` }
         ]);
       } else {
+        // Update with full conversation from server
         setMessages(data.messages || []);
         setChatState(data.state || null);
         setToolCalls(data.tool_calls || []);
@@ -102,7 +105,6 @@ export default function Home() {
       }
     } catch (err) {
       setMessages(prev => [...prev,
-        { role: 'user', content: userMessage },
         { role: 'assistant', content: `Error: ${err instanceof Error ? err.message : 'Network error'}` }
       ]);
     } finally {
