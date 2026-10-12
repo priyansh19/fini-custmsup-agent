@@ -107,7 +107,8 @@ class handler(BaseHTTPRequestHandler):
                 if state is None:
                     self._send_json({'error': 'Invalid or tampered session state. Please start a new chat.'}, 400)
                     return
-                agent.load_state(state)
+                else:
+                    agent.load_state(state)
 
             try:
                 reply = agent.send(message)
