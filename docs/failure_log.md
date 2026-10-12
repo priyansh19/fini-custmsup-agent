@@ -316,3 +316,19 @@ When deploying with a real LLM:
 6. ⚠️ If using Ollama locally: qwen2.5:3b minimum, measured 31% pass rate (5/16)
 7. ⚠️ If using OpenRouter: nvidia/nemotron-3.5-lightning:free scored 81% pre-fix (13/16, 0 wrong refunds)
 8. ⚠️ Hosted models (GPT-4, Claude) not yet tested — set API key and run evals to measure
+
+
+---
+
+## Live production testing (gpt-4o-mini, 2026-10-12)
+
+The live harness (138 cases) went from 94.2% to 96.4% to 98.6%. Bugs it found and fixed:
+- **Shared "default" session.** Every visitor of the web UI shared one chat session. Fixed with HMAC-signed, client-held state.
+- **Cumulative cap bypass.** Refund ids restarted on each new serverless instance and overwrote earlier refunds in the restored state. Fixed by deriving ids from the conversation's own store.
+- **Pre-verification lookups and an unscoped `get_transaction`.** Blocked in code.
+- **No escalation on lockout or frozen card.** These now escalate automatically in code.
+- **Exactly $75.00 treated as over the cap.** Fixed with a code-computed `refund_check`, plus a guard that bounces amount/age escalations of eligible refunds.
+- **Forgetting verification across turns.** Fixed with an up-to-date session summary added on every model call.
+- **"Follow up today" timeline promises.** Prompt fixed, plus a reply sanitizer in code.
+
+Still open: t03. An ambiguous "I was going to ask for a refund..." gets refunded. See `docs/live_test_report.md`.
