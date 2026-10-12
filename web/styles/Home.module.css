@@ -522,6 +522,30 @@
   display: flex;
   gap: 12px;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.helpButton {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  flex-shrink: 0;
+}
+
+.helpButton:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
 }
 
 .inputArea input {
@@ -569,6 +593,161 @@
   background: #ccc;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+/* Quick Help Tooltip */
+.quickHelpTooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 30px;
+  margin-bottom: 10px;
+  width: 400px;
+  max-height: 500px;
+  overflow-y: auto;
+  background: white;
+  border: 2px solid #667eea;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tooltipHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 10px 10px 0 0;
+}
+
+.tooltipHeader h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.tooltipHeader button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.tooltipHeader button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.tooltipSection {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.tooltipSection:last-of-type {
+  border-bottom: none;
+}
+
+.tooltipSection h4 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.helpCard {
+  padding: 10px 12px;
+  background: #f8f9ff;
+  border-left: 3px solid #667eea;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.helpCard:last-child {
+  margin-bottom: 0;
+}
+
+.helpCard strong {
+  display: block;
+  color: #333;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.helpDetail {
+  margin: 4px 0;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.helpDetail code {
+  background: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #667eea;
+  font-weight: 600;
+  border: 1px solid #e0e0e0;
+}
+
+.eligible {
+  color: #4caf50;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.notEligible {
+  color: #f44336;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.exampleFormat {
+  padding: 12px;
+  background: #fff8e1;
+  border-left: 3px solid #ffc107;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #555;
+}
+
+.exampleFormat strong {
+  color: #f57c00;
+  font-weight: 700;
+}
+
+.tooltipFooter {
+  padding: 12px 20px;
+  background: #f8f9ff;
+  border-radius: 0 0 10px 10px;
+  font-size: 11px;
+  color: #667eea;
+  text-align: center;
+  font-weight: 600;
 }
 
 /* Responsive */
@@ -625,5 +804,17 @@
   
   .welcomeMessage h2 {
     font-size: 22px;
+  }
+
+  .quickHelpTooltip {
+    width: calc(100vw - 60px);
+    left: 15px;
+    right: 15px;
+  }
+
+  .helpButton {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
   }
 }

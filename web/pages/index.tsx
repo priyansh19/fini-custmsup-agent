@@ -61,6 +61,7 @@ export default function Home() {
   const [showConfig, setShowConfig] = useState(true);
   const [showDemoInfo, setShowDemoInfo] = useState(true);
   const [showToolCalls, setShowToolCalls] = useState(false);
+  const [showQuickHelp, setShowQuickHelp] = useState(false);
   const [config, setConfig] = useState<Config>({
     model: 'openai/gpt-4o-mini',
     provider: 'OpenRouter',
@@ -424,6 +425,13 @@ export default function Home() {
         )}
 
         <div className={styles.inputArea}>
+          <button 
+            className={styles.helpButton}
+            onClick={() => setShowQuickHelp(!showQuickHelp)}
+            title="Quick Help"
+          >
+            ?
+          </button>
           <input
             type="text"
             value={input}
@@ -442,6 +450,59 @@ export default function Home() {
             Send
           </button>
         </div>
+
+        {/* Quick Help Tooltip */}
+        {showQuickHelp && (
+          <div className={styles.quickHelpTooltip}>
+            <div className={styles.tooltipHeader}>
+              <h3>🧪 Quick Testing Guide</h3>
+              <button onClick={() => setShowQuickHelp(false)}>×</button>
+            </div>
+            
+            <div className={styles.tooltipSection}>
+              <h4>📧 Test Accounts</h4>
+              <div className={styles.helpCard}>
+                <strong>Aisha Khan (Active)</strong>
+                <div className={styles.helpDetail}>Email: <code>aisha@example.com</code></div>
+                <div className={styles.helpDetail}>Card: <code>4242</code></div>
+              </div>
+              <div className={styles.helpCard}>
+                <strong>Ben Ortiz (Frozen)</strong>
+                <div className={styles.helpDetail}>Email: <code>ben@example.com</code></div>
+                <div className={styles.helpDetail}>Card: <code>1881</code></div>
+              </div>
+              <div className={styles.helpCard}>
+                <strong>Chen Wei (Active)</strong>
+                <div className={styles.helpDetail}>Email: <code>chen@example.com</code></div>
+                <div className={styles.helpDetail}>Card: <code>0007</code></div>
+              </div>
+            </div>
+
+            <div className={styles.tooltipSection}>
+              <h4>💳 Sample Transactions</h4>
+              <div className={styles.helpCard}>
+                <strong>T100</strong> - Spotify $42.50 <span className={styles.eligible}>✅ Eligible</span>
+              </div>
+              <div className={styles.helpCard}>
+                <strong>T102</strong> - Zara $120.00 <span className={styles.notEligible}>❌ Over limit</span>
+              </div>
+              <div className={styles.helpCard}>
+                <strong>T103</strong> - Netflix $30.00 <span className={styles.notEligible}>❌ Too old</span>
+              </div>
+            </div>
+
+            <div className={styles.tooltipSection}>
+              <h4>💬 Example Format</h4>
+              <div className={styles.exampleFormat}>
+                "Refund <strong>T100</strong>. Email <strong>aisha@example.com</strong>, card ending <strong>4242</strong>"
+              </div>
+            </div>
+
+            <div className={styles.tooltipFooter}>
+              Click examples in right sidebar for pre-filled messages →
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
