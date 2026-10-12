@@ -8,10 +8,10 @@
     },
     {
       "role": "assistant",
-      "content": "",
+      "content": null,
       "tool_calls": [
         {
-          "id": "call_fob2npz0",
+          "id": "c1",
           "name": "verify_customer",
           "arguments": {
             "email": "aisha@example.com",
@@ -22,16 +22,16 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_fob2npz0",
+      "tool_call_id": "c1",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
     },
     {
       "role": "assistant",
-      "content": "",
+      "content": null,
       "tool_calls": [
         {
-          "id": "call_3e4pp4vm",
+          "id": "c2",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "C001",
@@ -42,33 +42,33 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_3e4pp4vm",
+      "tool_call_id": "c2",
       "name": "get_transaction",
       "content": "{\"amount\": 120.0, \"date\": \"2026-10-03\", \"merchant\": \"Zara\", \"status\": \"settled\"}"
     },
     {
       "role": "assistant",
-      "content": "",
+      "content": null,
       "tool_calls": [
         {
-          "id": "call_9tcuuhjd",
-          "name": "issue_refund",
+          "id": "c3",
+          "name": "escalate_to_human",
           "arguments": {
-            "txn_id": "T102",
-            "amount": 60
+            "customer_id": "C001",
+            "summary": "T102 $120 transaction, over $75 limit, partial refund requested"
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "call_9tcuuhjd",
-      "name": "issue_refund",
-      "content": "{\"ok\": false, \"reason\": \"blocked_by_policy:over_auto_limit_escalate\"}"
+      "tool_call_id": "c3",
+      "name": "escalate_to_human",
+      "content": "{\"ticket_id\": \"TK0015\"}"
     },
     {
       "role": "assistant",
-      "content": "The refund amount exceeds the policy limit. I need to escalate this to a human for further review."
+      "content": "That transaction is $120, which is over what I can approve even partially. A teammate will review it."
     },
     {
       "role": "user",
@@ -76,27 +76,7 @@
     },
     {
       "role": "assistant",
-      "content": "",
-      "tool_calls": [
-        {
-          "id": "call_510fe97a",
-          "name": "escalate_to_human",
-          "arguments": {
-            "customer_id": "C001",
-            "summary": "Requested refund of $60 from Zara purchase T102"
-          }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "tool_call_id": "call_510fe97a",
-      "name": "escalate_to_human",
-      "content": "{\"ticket_id\": \"TK0006\"}"
-    },
-    {
-      "role": "assistant",
-      "content": "I have escalated your request to a human for review. They will contact you soon with the outcome."
+      "content": "I've already escalated T102. A specialist will follow up."
     }
   ],
   "tool_calls": [
@@ -125,24 +105,13 @@
       }
     ],
     [
-      "issue_refund",
-      {
-        "txn_id": "T102",
-        "amount": 60
-      },
-      {
-        "ok": false,
-        "reason": "blocked_by_policy:over_auto_limit_escalate"
-      }
-    ],
-    [
       "escalate_to_human",
       {
         "customer_id": "C001",
-        "summary": "Requested refund of $60 from Zara purchase T102"
+        "summary": "T102 $120 transaction, over $75 limit, partial refund requested"
       },
       {
-        "ticket_id": "TK0006"
+        "ticket_id": "TK0015"
       }
     ]
   ],

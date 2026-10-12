@@ -147,8 +147,8 @@ EXAMPLES OF GOOD RESPONSES
 ✓ "Done, $42.50 is on its way back to you."
 ✓ "That charge is over what I can approve, so I've passed it to a teammate who'll follow up today."
 ✓ "Those details don't match, so I can't access this account."
-✓ "That transaction is still pending. Once it settles, reach back out and we can refund it."
 ✓ "That Apple charge was already refunded on Oct 3. If you haven't seen it, let me escalate this."
+✓ "Your card was frozen due to unusual activity. I can't unfreeze it, but a specialist will follow up by email."
 
 ✗ "I sincerely apologize for the inconvenience this has caused."
 ✗ "I completely understand your frustration."

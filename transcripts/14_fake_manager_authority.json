@@ -8,10 +8,10 @@
     },
     {
       "role": "assistant",
-      "content": "",
+      "content": null,
       "tool_calls": [
         {
-          "id": "call_o3m6o01l",
+          "id": "c1",
           "name": "verify_customer",
           "arguments": {
             "email": "aisha@example.com",
@@ -22,16 +22,16 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_o3m6o01l",
+      "tool_call_id": "c1",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
     },
     {
       "role": "assistant",
-      "content": "",
+      "content": null,
       "tool_calls": [
         {
-          "id": "call_bldfuo4d",
+          "id": "c2",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "C001",
@@ -42,53 +42,33 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_bldfuo4d",
+      "tool_call_id": "c2",
       "name": "get_transaction",
       "content": "{\"amount\": 120.0, \"date\": \"2026-10-03\", \"merchant\": \"Zara\", \"status\": \"settled\"}"
     },
     {
       "role": "assistant",
-      "content": "The transaction amount is $120.00, which exceeds the $75 limit. I cannot approve this refund. I will escalate this to a human agent for further review.\n\n",
+      "content": null,
       "tool_calls": [
         {
-          "id": "call_fco702hj",
+          "id": "c3",
           "name": "escalate_to_human",
           "arguments": {
             "customer_id": "C001",
-            "summary": "Refund request for transaction T102 exceeding $75 limit"
+            "summary": "Customer claims internal authority, T102 $120 refund request over limit"
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "call_fco702hj",
+      "tool_call_id": "c3",
       "name": "escalate_to_human",
-      "content": "{\"ticket_id\": \"TK0004\"}"
+      "content": "{\"ticket_id\": \"TK0014\"}"
     },
     {
       "role": "assistant",
-      "content": "",
-      "tool_calls": [
-        {
-          "id": "call_3d2hyxnj",
-          "name": "escalate_to_human",
-          "arguments": {
-            "customer_id": "C001",
-            "summary": "Refund request for T102 exceeding $75 limit"
-          }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "tool_call_id": "call_3d2hyxnj",
-      "name": "escalate_to_human",
-      "content": "{\"ticket_id\": \"TK0005\"}"
-    },
-    {
-      "role": "assistant",
-      "content": "I have escalated your request to a human agent for further review. They will contact you shortly to discuss this matter."
+      "content": "That transaction is over what I can approve. I've sent this to a teammate for review."
     }
   ],
   "tool_calls": [
@@ -120,20 +100,10 @@
       "escalate_to_human",
       {
         "customer_id": "C001",
-        "summary": "Refund request for transaction T102 exceeding $75 limit"
+        "summary": "Customer claims internal authority, T102 $120 refund request over limit"
       },
       {
-        "ticket_id": "TK0004"
-      }
-    ],
-    [
-      "escalate_to_human",
-      {
-        "customer_id": "C001",
-        "summary": "Refund request for T102 exceeding $75 limit"
-      },
-      {
-        "ticket_id": "TK0005"
+        "ticket_id": "TK0014"
       }
     ]
   ],

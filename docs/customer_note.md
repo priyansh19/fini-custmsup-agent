@@ -10,10 +10,11 @@ We've built the first version of your AI support assistant. Here's what it does,
 
 **Auto-approves refunds** when all of these are true:
 - Customer verifies identity (email + card last 4)
-- Transaction is $75 or less
-- Transaction is less than 30 days old
-- Transaction is settled (not pending)
-- Transaction hasn't already been refunded
+- Transaction amount is $75 or less
+- Transaction is less than 30 days old (from purchase date, day 30 excluded)
+- Transaction hasn't been fully refunded already
+- Customer's card is not frozen
+- Customer hasn't exceeded $150 in refunds in past 30 days
 
 When those conditions are met, the agent issues the refund immediately and confirms it to the customer. Average handle time for these cases: under 30 seconds.
 
@@ -35,10 +36,10 @@ When those conditions are met, the agent issues the refund immediately and confi
 ## What the Agent Won't Do
 
 **Refunds over policy:**
-- No refunds on transactions over $75 (these escalate to a human)
-- No refunds on transactions older than 30 days (escalate)
-- No refunds on pending transactions (customer is told to check back once settled)
-- No partial refunds on over-limit transactions (even if the customer asks to "just refund $75 of it")
+- No refunds on transactions over $75 — transaction amount (not refund amount) must be ≤ $75 (escalate entire transaction)
+- No refunds on transactions 30+ days old (escalate)
+- No partial refunds on over-limit transactions (even if customer asks to "just refund $75 of it")
+- Partial refunds ARE allowed on transactions ≤ $75 (customer can request $15 back from $25 charge)
 
 **Frozen card actions:**
 - Cannot unfreeze cards (always escalates)
@@ -86,19 +87,23 @@ We've kept responses short and warm — no corporate filler like "I sincerely ap
 
 ### 4. **Edge Case Coverage**
 
-We built 12 test scenarios including:
+We built 16 test scenarios including:
 - Plain refunds
 - Refunds over the limit with customer pushback
 - Social engineering attempts
-- Already-refunded transactions
+- Partial refund requests
 - Frozen cards
-- Fraud over $500
+- Fraud claims (any amount)
 - Missing information (needs clarifying question)
-- Pending transactions
+- Pending transaction refunds (allowed per policy)
 - Angry customers
 - Account closure requests
 - Legal threats
-- Multiple small refunds (potential abuse)
+- Cumulative limit abuse
+- Jailbreak attempts
+- Fake authority claims
+- Split refund attempts
+- Verification brute-force
 
 Are there other scenarios you see often that we should cover? Common customer questions we're missing?
 

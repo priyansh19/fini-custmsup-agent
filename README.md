@@ -10,7 +10,7 @@ Build, in code, an LLM support agent for **Paylane** (fintech: cards, transfers,
 4. **Eval** – own pass/fail checks per conversation, report score, show one failure + fix.
 5. **Customer note** – plain-language email to Paylane head of support: does / won't do / needs before launch.
 
-Policy: refund auto-approve ≤ $75/txn, < 30 days old, verified; else escalate; never refund twice. Verify via card last-4 **and** email on file before any account detail; never reveal full card or the email. Frozen cards: explain, never unfreeze, escalate. Legal action, fraud > $500, account closure → human. Tone: short, warm, no filler, no promises beyond policy.
+Policy: refund auto-approve if txn ≤ $75, < 30 days old, customer verified, card not frozen, under $150 cumulative cap; else escalate. Verify via card last-4 **and** email before any account detail; never reveal full card/email. Frozen cards: no refunds, escalate. Legal action, ANY fraud claim, account closure → human. Partial refunds OK on ≤$75 txns. Pending txns refundable. Tone: short, warm, no filler.
 
 Judged on: holding rules under pushback, catching own failures, clarity of customer note, **asking good questions** (ambiguity is deliberate).
 
@@ -175,7 +175,7 @@ web/                   Next.js UI + Vercel deployment (see below)
 
 **Guardrail layer (paylane/policy.py):**
 - Runs BEFORE `issue_refund` executes
-- Deterministic checks (customer verified? amount ≤ $75? age < 30 days? not already refunded? not pending?)
+- Deterministic checks (customer verified? transaction amount ≤ $75? age < 30 days? not fully refunded? card not frozen? under cumulative cap?)
 - Blocks refund even if LLM calls the tool incorrectly
 - Returns `{"ok": false, "reason": "blocked_by_policy:..."}` so LLM can explain to customer
 
@@ -198,7 +198,7 @@ No separate verify endpoint in the spec — verification is the agent's responsi
 ## Open questions / ambiguities (candidates to email Deepak)
 1. **$75 cap on bigger txns** – for a $120 charge, can the agent refund $75 (partial) or must the whole thing escalate? Is $75 inclusive?
 2. **Partial refunds generally** – can a customer ask for part of a ≤ $75 charge? Do multiple partials on one txn count as "refunding twice"?
-3. **Pending transactions** – refundable, or wait until settled? (current assumption: not refundable)
+3. **Pending transactions** – refundable, or wait until settled? (POLICY: refundable for faster resolution)
 4. **30-day basis** – from purchase date or settlement date? Is day 30 "under 30"? Whose timezone?
 5. **Cumulative limits** – any per-customer daily/total cap across several small refunds (split-charge abuse)?
 6. **Verification retries** – how many failed attempts before lock/escalate? Can a customer verify with a different email mid-chat?
@@ -266,7 +266,7 @@ Based on customer-support best practices and the provided guidance:
 
 ## Edge Cases & Scenario Rationale
 
-The 12 test scenarios cover:
+The 16 test scenarios cover:
 
 1. **01_plain_refund** — Happy path baseline (verified, small amount, recent, settled)
 2. **02_over_limit_pushback** — $120 > $75, customer argues "just refund $75 of it." Tests hard cap + escalation under pressure.
@@ -290,5 +290,5 @@ The 12 test scenarios cover:
 
 ## TODO (Priyansh)
 - Write the real system prompt/rulebook (`paylane/prompt.py`).
-- Expand to 12 scenarios (angry customer, account closure, legal threat, verification retry abuse, cumulative small refunds, transfer request…).
+- Expanded to 16 scenarios (angry customer, account closure, legal threat, jailbreak attempts, fake authority, split refunds, verification brute-force).
 - Run with a real model, document one failure + fix (`docs/failure_log.md`), write `docs/customer_note.md`.

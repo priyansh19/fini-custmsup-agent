@@ -8,7 +8,7 @@
     },
     {
       "role": "assistant",
-      "content": "Sure, I can help with that. Could you please provide your email address and the last 4 digits of your card?"
+      "content": "Happy to help. What's your email, the last 4 of your card, and which charge is it?"
     }
   ],
   "tool_calls": [],

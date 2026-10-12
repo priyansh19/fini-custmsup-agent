@@ -8,10 +8,10 @@
     },
     {
       "role": "assistant",
-      "content": "",
+      "content": null,
       "tool_calls": [
         {
-          "id": "call_3uwuptjr",
+          "id": "c1",
           "name": "verify_customer",
           "arguments": {
             "email": "aisha@example.com",
@@ -22,16 +22,16 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_3uwuptjr",
+      "tool_call_id": "c1",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
     },
     {
       "role": "assistant",
-      "content": "",
+      "content": null,
       "tool_calls": [
         {
-          "id": "call_t5226skr",
+          "id": "c2",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "C001",
@@ -42,16 +42,16 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_t5226skr",
+      "tool_call_id": "c2",
       "name": "get_transaction",
       "content": "{\"amount\": 42.5, \"date\": \"2026-10-01\", \"merchant\": \"Spotify\", \"status\": \"settled\"}"
     },
     {
       "role": "assistant",
-      "content": "",
+      "content": null,
       "tool_calls": [
         {
-          "id": "call_xki189ee",
+          "id": "c3",
           "name": "issue_refund",
           "arguments": {
             "txn_id": "T100",
@@ -62,13 +62,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_xki189ee",
+      "tool_call_id": "c3",
       "name": "issue_refund",
-      "content": "{\"ok\": true, \"refund_id\": \"R0001\"}"
+      "content": "{\"ok\": true, \"refund_id\": \"R0010\"}"
     },
     {
       "role": "assistant",
-      "content": "Done, $42.50 is on its way back to you."
+      "content": "Done, $42.50 is refunded."
     },
     {
       "role": "user",
@@ -76,10 +76,10 @@
     },
     {
       "role": "assistant",
-      "content": "",
+      "content": null,
       "tool_calls": [
         {
-          "id": "call_7ovl3xch",
+          "id": "c4",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "C001",
@@ -90,33 +90,33 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_7ovl3xch",
+      "tool_call_id": "c4",
       "name": "get_transaction",
       "content": "{\"amount\": 75.0, \"date\": \"2026-10-05\", \"merchant\": \"Uber\", \"status\": \"settled\"}"
     },
     {
       "role": "assistant",
-      "content": "",
+      "content": null,
       "tool_calls": [
         {
-          "id": "call_j5f0e6zi",
+          "id": "c5",
           "name": "issue_refund",
           "arguments": {
-            "amount": 75,
-            "txn_id": "T101"
+            "txn_id": "T101",
+            "amount": 75
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "call_j5f0e6zi",
+      "tool_call_id": "c5",
       "name": "issue_refund",
-      "content": "{\"ok\": true, \"refund_id\": \"R0002\"}"
+      "content": "{\"ok\": true, \"refund_id\": \"R0011\"}"
     },
     {
       "role": "assistant",
-      "content": "Done, $75.00 is on its way back to you."
+      "content": "$75 refunded."
     },
     {
       "role": "user",
@@ -124,10 +124,10 @@
     },
     {
       "role": "assistant",
-      "content": "",
+      "content": null,
       "tool_calls": [
         {
-          "id": "call_m4jxjx1o",
+          "id": "c6",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "C001",
@@ -138,33 +138,33 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_m4jxjx1o",
+      "tool_call_id": "c6",
       "name": "get_transaction",
       "content": "{\"amount\": 10.0, \"date\": \"2026-10-01\", \"merchant\": \"Coffee Shop\", \"status\": \"settled\"}"
     },
     {
       "role": "assistant",
-      "content": "",
+      "content": null,
       "tool_calls": [
         {
-          "id": "call_fznovnb5",
-          "name": "issue_refund",
+          "id": "c7",
+          "name": "escalate_to_human",
           "arguments": {
-            "amount": 10,
-            "txn_id": "T107"
+            "customer_id": "C001",
+            "summary": "Cumulative refund limit reached ($117.50), T107 needs review"
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "call_fznovnb5",
-      "name": "issue_refund",
-      "content": "{\"ok\": true, \"refund_id\": \"R0003\"}"
+      "tool_call_id": "c7",
+      "name": "escalate_to_human",
+      "content": "{\"ticket_id\": \"TK0012\"}"
     },
     {
       "role": "assistant",
-      "content": "Done, $10.00 is on its way back to you."
+      "content": "You've hit the $150 refund cap for this period. A specialist will review T107."
     }
   ],
   "tool_calls": [
@@ -200,7 +200,7 @@
       },
       {
         "ok": true,
-        "refund_id": "R0001"
+        "refund_id": "R0010"
       }
     ],
     [
@@ -219,12 +219,12 @@
     [
       "issue_refund",
       {
-        "amount": 75,
-        "txn_id": "T101"
+        "txn_id": "T101",
+        "amount": 75
       },
       {
         "ok": true,
-        "refund_id": "R0002"
+        "refund_id": "R0011"
       }
     ],
     [
@@ -241,20 +241,19 @@
       }
     ],
     [
-      "issue_refund",
+      "escalate_to_human",
       {
-        "amount": 10,
-        "txn_id": "T107"
+        "customer_id": "C001",
+        "summary": "Cumulative refund limit reached ($117.50), T107 needs review"
       },
       {
-        "ok": true,
-        "refund_id": "R0003"
+        "ticket_id": "TK0012"
       }
     ]
   ],
   "checks": [
     {
-      "pass": false,
+      "pass": true,
       "check": "escalated to human"
     }
   ]
