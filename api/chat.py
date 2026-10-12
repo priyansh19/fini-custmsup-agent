@@ -116,9 +116,15 @@ class handler(BaseHTTPRequestHandler):
                                  'state': data.get('state')}, 503)
                 return
 
+            # Filter messages for customer-facing UI: only user and assistant with actual text content
+            filtered_messages = [
+                m for m in agent.messages 
+                if m.get('role') in ('user', 'assistant') and m.get('content', '').strip()
+            ]
+            
             self._send_json({
                 'reply': reply,
-                'messages': [m for m in agent.messages if m.get('role') in ('user', 'assistant')],
+                'messages': filtered_messages,
                 'tool_calls': [
                     {'name': name, 'arguments': args, 'result': result}
                     for name, args, result in agent.store.calls

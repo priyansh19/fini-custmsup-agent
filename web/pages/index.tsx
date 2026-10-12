@@ -65,8 +65,8 @@ export default function Home() {
   const [config, setConfig] = useState<Config>({
     model: 'openai/gpt-4o-mini',
     provider: 'OpenRouter',
-    temperature: 0,
-    maxTokens: 4096,
+    temperature: 0,        // Optimal: 0 for deterministic, consistent responses
+    maxTokens: 4096,       // Optimal: Sufficient for multi-turn conversations
   });
   const [testResults, setTestResults] = useState<any>(null);
 
@@ -206,7 +206,7 @@ export default function Home() {
             </div>
 
             <div className={styles.configSection}>
-              <label>Temperature: {config.temperature}</label>
+              <label>Temperature: {config.temperature} {config.temperature === 0 && '(✓ Optimal)'}</label>
               <input 
                 type="range" 
                 min="0" 
@@ -215,11 +215,11 @@ export default function Home() {
                 value={config.temperature}
                 onChange={(e) => setConfig({ ...config, temperature: parseFloat(e.target.value) })}
               />
-              <small>Lower = more consistent, Higher = more creative</small>
+              <small>0 (default) = consistent responses. Higher = more creative.</small>
             </div>
 
             <div className={styles.configSection}>
-              <label>Max Tokens</label>
+              <label>Max Tokens {config.maxTokens === 4096 && '(✓ Optimal)'}</label>
               <input 
                 type="number" 
                 value={config.maxTokens} 
@@ -227,6 +227,7 @@ export default function Home() {
                 min="256"
                 max="32768"
               />
+              <small>4096 (default) = sufficient for conversations.</small>
             </div>
 
             <div className={styles.configActions}>
@@ -388,7 +389,11 @@ export default function Home() {
             </div>
           )}
           {messages
-            .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+            .filter(msg => 
+              (msg.role === 'user' || msg.role === 'assistant') && 
+              msg.content && 
+              msg.content.trim().length > 0
+            )
             .map((msg, idx) => (
             <div key={idx} className={`${styles.message} ${styles[msg.role]}`}>
               <div className={styles.messageMeta}>
