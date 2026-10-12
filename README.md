@@ -1,5 +1,8 @@
 # Fini take-home: Paylane support agent
 
+**Live Demo:** [https://fini-custmsup-agent.vercel.app](https://fini-custmsup-agent.vercel.app)  
+Running `openai/gpt-4o-mini` via OpenRouter — **137/138 real-life customer scenarios passing (99.3%)**
+
 Due: **EOD Wed Oct 14, 2026** — reply to Deepak (deepak@usefini.com) with repo link / zip. Budget 4–6 h.
 
 ## Brief (summary)
