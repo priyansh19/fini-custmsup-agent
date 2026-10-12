@@ -1,5 +1,8 @@
 # Fini take-home: Paylane support agent
 
+**Live Demo:** [https://fini-custmsup-agent.vercel.app](https://fini-custmsup-agent.vercel.app)  
+Running `nvidia/nemotron-3-super-120b-a12b:free` via OpenRouter (16/16 evals passing, 0 wrong refunds)
+
 Due: **EOD Wed Oct 14, 2026** — reply to Deepak (deepak@usefini.com) with repo link / zip. Budget 4–6 h.
 
 ## Brief (summary)
