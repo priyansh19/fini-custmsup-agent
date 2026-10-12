@@ -19,20 +19,55 @@ class Agent:
         # Inject today's date dynamically into the prompt
         self.system = system_prompt.replace("{{TODAY}}", TODAY.strftime("%Y-%m-%d"))
         self.guardrail = guardrail
-        self.messages, self.session = [], {"verified": False, "customer_id": None, "failed_verifications": 0}
+        self.messages, self.session = [], {"verified": False, "customer_id": None, "failed_verifications": 0, "verification_locked": False}
 
     def _run_tool(self, name, args):
+        # SECURITY: After 3 failed verification attempts, lock verification and force escalation
         if name == "verify_customer":
-            cid = check_verification(self.store, args.get("email"), args.get("last4"))
-            if cid:
-                self.session.update(verified=True, customer_id=cid)
-                res = {"verified": True, "customer_id": cid}
+            if self.session["verification_locked"]:
+                res = {"verified": False, "error": "verification_locked"}
             else:
-                self.session["failed_verifications"] += 1   # TODO: lockout policy? (open question)
-                res = {"verified": False}
+                cid = check_verification(self.store, args.get("email"), args.get("last4"))
+                if cid:
+                    self.session.update(verified=True, customer_id=cid)
+                    res = {"verified": True, "customer_id": cid}
+                else:
+                    self.session["failed_verifications"] += 1
+                    if self.session["failed_verifications"] >= 3:
+                        self.session["verification_locked"] = True
+                        res = {"verified": False, "error": "verification_locked_after_3_attempts"}
+                    else:
+                        res = {"verified": False}
+        elif name == "get_customer":
+            # SECURITY: Don't leak card_last4 before verification
+            res = TOOLS[name](self.store, **args)
+            if not self.session.get("verified") and "card_last4" in res:
+                # Return minimal info only
+                res = {"id": res.get("id"), "name": res.get("name"), "verified": False}
+        elif name == "get_transaction":
+            # Normalize transaction ID: extract T\d+ from inputs like "Amazon T105"
+            import re
+            txn_id = args.get("txn_id", "")
+            match = re.search(r'T\d+', txn_id)
+            if match:
+                args = {**args, "txn_id": match.group(0)}
+            try:
+                res = TOOLS[name](self.store, **args)
+            except TypeError as e:
+                res = {"error": f"bad_arguments: {e}"}
         elif name == "issue_refund" and self.guardrail:
-            ok, reason = refund_allowed(self.store, self.session, args.get("txn_id"), float(args.get("amount", 0)))
-            res = TOOLS[name](self.store, **args) if ok else {"ok": False, "reason": f"blocked_by_policy:{reason}"}
+            # SECURITY: Refuse refunds if verification is locked
+            if self.session.get("verification_locked"):
+                res = {"ok": False, "reason": "blocked_by_policy:verification_locked"}
+            else:
+                ok, reason = refund_allowed(self.store, self.session, args.get("txn_id"), float(args.get("amount", 0)))
+                res = TOOLS[name](self.store, **args) if ok else {"ok": False, "reason": f"blocked_by_policy:{reason}"}
+        elif name == "escalate_to_human":
+            # SECURITY: Require minimal customer_id even if not verified (for locked sessions)
+            try:
+                res = TOOLS[name](self.store, **args)
+            except TypeError as e:
+                res = {"error": f"bad_arguments: {e}"}
         elif name in TOOLS:
             try:
                 res = TOOLS[name](self.store, **args)

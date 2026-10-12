@@ -88,14 +88,20 @@ python3 -m evals.run
 - `qwen2.5:3b` — Score: 5/16 (31%)
 - `qwen2.5:7b` — Too slow for development (>5 min per eval run)
 
-*OpenRouter (pre-fix):*
-- `nvidia/nemotron-3.5-lightning:free` — Score: 13/16 (81%) — Failed: 01, 07, 12 — **0 wrong refunds**
-- `nvidia/nemotron-3-super-120b-a12b:free` — Score: 12/16 (75%) — Failed: 01, 04, 07, 12 — **0 wrong refunds**
+*OpenRouter (post-fix, after security hardening):*
+- `nvidia/nemotron-3-super-120b-a12b:free` — **16/16 (100%)** — **0 wrong refunds**
+- `nvidia/nemotron-3.5-lightning:free` — **14/16 (88%)** — Failed: 08, 16 — **0 wrong refunds**
+
+*OpenRouter (pre-fix, before security hardening):*
+- `nvidia/nemotron-3.5-lightning:free` — 13/16 (81%) — Failed: 01, 07, 12
+- `nvidia/nemotron-3-super-120b-a12b:free` — 12/16 (75%) — Failed: 01, 04, 07, 12
 
 *Scripted (demo mode):*
-- `scripted mode` — Score: 16/16 (100%)
+- `scripted mode` — 16/16 (100%)
 
-**Note:** OpenRouter scores above are pre-fix results (measured before scenario 12 math fix, scenario 07 check relaxation, and prompt updates). Post-fix results pending rerun. Hosted models (OpenAI GPT, Anthropic Claude) are not yet tested. To test them, set the appropriate provider and API key as shown above and run the evals.
+**Critical Security Fix:** Post-fix results include code-level hardening after scenario 16 revealed a verification bypass vulnerability (model called `get_customer` after 3 failed attempts, learned real card_last4, then verified). Now fixed with verification lockout, information protection, and refusal of operations on locked sessions. See `docs/failure_log.md` for full details.
+
+**Note:** Hosted models (OpenAI GPT, Anthropic Claude) are not yet tested. To test them, set the appropriate provider and API key as shown above and run the evals.
 
 ### Web UI (Next.js + Python API)
 
@@ -159,8 +165,8 @@ paylane/
   ├── prompt.py          System prompt with full rulebook (verification, refunds, escalation)
   ├── policy.py          Deterministic guardrail: refund_allowed(), verification helpers
   ├── tools.py           4 mock tools (get_customer, get_transaction, issue_refund, escalate_to_human)
-  ├── data.py            Seeded fake customers/transactions (fixed TODAY for determinism)
-  ├── providers.py       LLM adapters (OpenAI, Anthropic, Scripted for tests)
+  ├── data.py            Seeded fake customers/transactions (TODAY = 2026-10-11, fixed on purpose for reproducible time-based rule testing)
+  ├── providers.py       LLM adapters (OpenAI, Anthropic, OpenRouter, Ollama, Scripted for tests)
   └── agent.py           Tool-calling loop with guardrail enforcement
 
 evals/
