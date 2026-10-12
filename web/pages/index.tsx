@@ -58,7 +58,9 @@ export default function Home() {
   const [chatState, setChatState] = useState<string | null>(null);
   
   // Configuration state
-  const [showConfig, setShowConfig] = useState(false);
+  const [showConfig, setShowConfig] = useState(true);
+  const [showDemoInfo, setShowDemoInfo] = useState(true);
+  const [showToolCalls, setShowToolCalls] = useState(false);
   const [config, setConfig] = useState<Config>({
     model: 'openai/gpt-4o-mini',
     provider: 'OpenRouter',
@@ -151,13 +153,14 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <Head>
-        <title>Paylane Support Agent</title>
+        <title>Paylane Support Agent - Demo</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <aside className={styles.sidebar}>
+      {/* Left Sidebar - Configuration */}
+      <aside className={styles.leftSidebar}>
         <div className={styles.sidebarHeader}>
-          <h2>Configuration</h2>
+          <h2>⚙️ Model Settings</h2>
           <button onClick={() => setShowConfig(!showConfig)}>
             {showConfig ? '−' : '+'}
           </button>
@@ -242,60 +245,164 @@ export default function Home() {
           </div>
         )}
 
-        <div className={styles.sidebarStats}>
-          <h3>Session Stats</h3>
-          <div>Messages: {messages.length}</div>
-          <div>Tool Calls: {toolCalls.length}</div>
-          <div>Mode: {demoMode ? 'Demo' : 'Live'}</div>
-          <div>Model: {config.model.split('/').pop()}</div>
+        <div className={styles.debugSection}>
+          <label>
+            <input 
+              type="checkbox" 
+              checked={showToolCalls} 
+              onChange={(e) => setShowToolCalls(e.target.checked)} 
+            />
+            Show Internal Tool Calls
+          </label>
+          <small>For testing/debugging only</small>
         </div>
 
-        <div className={styles.sidebarInfo}>
-          <h3>Testing Tips</h3>
-          <ul>
-            <li>Try: "Refund T100. aisha@example.com 4242"</li>
-            <li>Over limit: "Refund T102. aisha@example.com 4242"</li>
-            <li>Frozen card: "Refund T200. ben@example.com 1881"</li>
-            <li>Fraud: "T301 is fraud! chen@example.com 0007"</li>
-          </ul>
+        <div className={styles.sidebarStats}>
+          <h3>📊 Session Stats</h3>
+          <div>Messages: {messages.length}</div>
+          <div>Tool Calls: {toolCalls.length}</div>
+          <div>Mode: {demoMode ? '🎭 Demo' : '🔴 Live'}</div>
+          <div>Model: {config.model.split('/').pop()}</div>
         </div>
+      </aside>
+
+      {/* Right Sidebar - Demo Info */}
+      <aside className={styles.rightSidebar}>
+        <div className={styles.sidebarHeader}>
+          <h2>💡 Demo Information</h2>
+          <button onClick={() => setShowDemoInfo(!showDemoInfo)}>
+            {showDemoInfo ? '−' : '+'}
+          </button>
+        </div>
+
+        {showDemoInfo && (
+          <>
+            <div className={styles.demoSection}>
+              <h3>📝 What This Is</h3>
+              <p>Interactive demo of an AI-powered customer support agent for Paylane (fintech).</p>
+              <p><strong>Features:</strong></p>
+              <ul>
+                <li>Automated refund processing</li>
+                <li>Policy enforcement ($75 limit, 30 days)</li>
+                <li>Fraud detection & escalation</li>
+                <li>Multi-turn conversation memory</li>
+              </ul>
+            </div>
+
+            <div className={styles.demoSection}>
+              <h3>🧪 Try These Examples</h3>
+              <div className={styles.exampleButtons}>
+                <button onClick={() => setInput('Hi, I was charged for Spotify twice. Transaction T100. Email aisha@example.com, card 4242')}>
+                  ✅ Simple Refund
+                </button>
+                <button onClick={() => setInput('Refund my Zara purchase T102. aisha@example.com 4242')}>
+                  ❌ Over Limit ($120)
+                </button>
+                <button onClick={() => setInput('Refund T200 please. ben@example.com 1881')}>
+                  🔒 Frozen Card
+                </button>
+                <button onClick={() => setInput('T301 is fraud! I never made it. chen@example.com 0007')}>
+                  ⚠️ Fraud Claim
+                </button>
+                <button onClick={() => setInput('I want a refund')}>
+                  ❓ Vague Request
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.demoSection}>
+              <h3>👥 Test Accounts</h3>
+              <div className={styles.account}>
+                <strong>Aisha Khan</strong><br/>
+                Email: aisha@example.com<br/>
+                Card: ending 4242<br/>
+                Status: Active ✅
+              </div>
+              <div className={styles.account}>
+                <strong>Ben Ortiz</strong><br/>
+                Email: ben@example.com<br/>
+                Card: ending 1881<br/>
+                Status: Frozen 🔒
+              </div>
+              <div className={styles.account}>
+                <strong>Chen Wei</strong><br/>
+                Email: chen@example.com<br/>
+                Card: ending 0007<br/>
+                Status: Active ✅
+              </div>
+            </div>
+
+            <div className={styles.demoSection}>
+              <h3>💳 Sample Transactions</h3>
+              <div className={styles.transaction}>
+                <strong>T100</strong>: Spotify $42.50 (Oct 1)<br/>
+                <small>✅ Eligible for refund</small>
+              </div>
+              <div className={styles.transaction}>
+                <strong>T102</strong>: Zara $120.00 (Oct 3)<br/>
+                <small>❌ Over $75 limit</small>
+              </div>
+              <div className={styles.transaction}>
+                <strong>T103</strong>: Netflix $30.00 (Aug 20)<br/>
+                <small>❌ Over 30 days old</small>
+              </div>
+              <div className={styles.transaction}>
+                <strong>T200</strong>: Steam $60.00 (Oct 4)<br/>
+                <small>🔒 Ben's frozen card</small>
+              </div>
+            </div>
+
+            <div className={styles.demoSection}>
+              <h3>📚 Learn More</h3>
+              <a href="/evals" target="_blank">View Eval Results →</a><br/>
+              <a href="https://github.com/priyansh19/fini-custmsup-agent" target="_blank">GitHub Repo →</a>
+            </div>
+          </>
+        )}
       </aside>
 
       <main className={styles.main}>
         <header className={styles.header}>
-          <h1>Paylane Support Agent</h1>
-          {demoMode && <span className={styles.demoBanner}>Demo Mode (No API Key)</span>}
+          <h1>💬 Paylane Support Agent</h1>
+          <div className={styles.headerRight}>
+            {demoMode && <span className={styles.demoBanner}>🎭 Demo Mode</span>}
+            <button onClick={resetChat} className={styles.newChatBtn}>New Chat</button>
+          </div>
         </header>
 
         <div className={styles.chat}>
+          {messages.length === 0 && (
+            <div className={styles.welcomeMessage}>
+              <h2>👋 Welcome to Paylane Support</h2>
+              <p>I'm here to help with refunds, account questions, and transaction issues.</p>
+              <p className={styles.welcomeHint}>
+                <strong>Tip:</strong> Click an example on the right to get started →
+              </p>
+            </div>
+          )}
           {messages.map((msg, idx) => (
             <div key={idx} className={`${styles.message} ${styles[msg.role]}`}>
               <div className={styles.messageMeta}>
-                {msg.role === 'user' ? '👤 You' : '🤖 Agent'}
+                {msg.role === 'user' ? '👤 You' : '🤖 Support Agent'}
               </div>
               <div className={styles.messageContent}>
                 {msg.content}
-                {msg.tool_calls && msg.tool_calls.length > 0 && (
-                  <div className={styles.toolCallsIndicator}>
-                    🔧 {msg.tool_calls.length} tool call(s)
-                  </div>
-                )}
               </div>
             </div>
           ))}
           {loading && (
             <div className={`${styles.message} ${styles.assistant}`}>
-              <div className={styles.messageMeta}>🤖 Agent</div>
+              <div className={styles.messageMeta}>🤖 Support Agent</div>
               <div className={styles.messageContent}>
-                <span className={styles.loading}>Thinking...</span>
+                <span className={styles.loading}>Typing...</span>
               </div>
             </div>
           )}
         </div>
 
-        {toolCalls.length > 0 && (
+        {showToolCalls && toolCalls.length > 0 && (
           <details className={styles.toolCalls}>
-            <summary>Tool Calls ({toolCalls.length})</summary>
+            <summary>🔧 Internal Tool Calls ({toolCalls.length}) - Debug View</summary>
             {toolCalls.map((call, idx) => (
               <div key={idx} className={styles.toolCall}>
                 <div className={styles.toolName}>{call.name}</div>
