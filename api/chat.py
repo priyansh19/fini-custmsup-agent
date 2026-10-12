@@ -73,6 +73,27 @@ class handler(BaseHTTPRequestHandler):
                 return
             message = message.strip()
 
+            # Get configuration from request
+            config = data.get('config', {}) if isinstance(data, dict) else {}
+            model = config.get('model')
+            provider_name = config.get('provider')
+            temperature = config.get('temperature', 0)
+            
+            # Override environment variables temporarily if config specified
+            if model and provider_name:
+                if provider_name == 'OpenRouter':
+                    os.environ['PAYLANE_PROVIDER'] = 'openrouter'
+                    os.environ['OPENROUTER_MODEL'] = model
+                elif provider_name == 'OpenAI':
+                    os.environ['PAYLANE_PROVIDER'] = 'openai'
+                    os.environ['PAYLANE_MODEL'] = model
+                elif provider_name == 'Anthropic':
+                    os.environ['PAYLANE_PROVIDER'] = 'anthropic'
+                    os.environ['PAYLANE_MODEL'] = model
+                elif provider_name == 'Ollama (Local)':
+                    os.environ['PAYLANE_PROVIDER'] = 'ollama'
+                    os.environ['PAYLANE_MODEL'] = model
+            
             has_key = any(os.getenv(k) for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY"))
             if has_key:
                 provider, demo_mode = from_env(), False
