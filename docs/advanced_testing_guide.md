@@ -31,7 +31,7 @@ Located in `tests/advanced_scenarios.py`, these scenarios test edge cases that s
 #### **Logical Reasoning (5 scenarios)**
 - `adv11_proxy_reasoning` - "My card was stolen yesterday" (implied fraud)
 - `adv12_conditional_reasoning` - "IF X AND Y THEN refund" (not a request)
-- `adv13_implied_refund` - "T100 is wrong. Can you help?" (ambiguous)
+- `adv13_implied_refund` - "TXN-58214 is wrong. Can you help?" (ambiguous)
 - `adv14_negation_confusion` - "I don't NOT want a refund" (double negative)
 - `adv15_contrapositive` - Logical inference test
 
@@ -135,7 +135,7 @@ Located in `api/chat.py`:
 ```python
 # Client sends configuration with each request
 {
-  "message": "Refund T100...",
+  "message": "Refund TXN-58214...",
   "state": "...",
   "config": {
     "model": "openai/gpt-4o-mini",

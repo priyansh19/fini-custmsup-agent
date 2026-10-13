@@ -1,516 +1,153 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
-import styles from '../styles/Home.module.css';
+import Link from 'next/link';
+import s from '../styles/Support.module.css';
+import { useChat } from '../lib/useChat';
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-  tool_calls?: Array<{ name: string; arguments: any; id: string }>;
-}
+type Txn = { id: string; merchant: string; amount: number; date: string; status: string; hint: string };
+type Persona = { id: string; name: string; email: string; last4: string; status: string; transactions: Txn[] };
+type Scenario = { id: string; title: string; emoji: string; persona: string | null; expect: string; message: string };
 
-interface ToolCall {
-  name: string;
-  arguments: any;
-  result: any;
-}
-
-interface Config {
-  model: string;
-  provider: string;
-  temperature: number;
-  maxTokens: number;
-}
-
-const MODELS = {
-  'OpenRouter': [
-    { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini (Production)', cost: 'Low' },
-    { id: 'openai/gpt-4o', name: 'GPT-4o', cost: 'Medium' },
-    { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', cost: 'High' },
-    { id: 'anthropic/claude-3-haiku', name: 'Claude 3 Haiku', cost: 'Low' },
-    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron Super 120B (Free)', cost: 'Free' },
-    { id: 'nvidia/nemotron-3.5-lightning:free', name: 'Nemotron Lightning (Free)', cost: 'Free' },
-    { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash (Free)', cost: 'Free' },
-    { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B', cost: 'Low' },
+// Fallback if /api/scenarios is unreachable (same data the API serves).
+const FALLBACK: { personas: Persona[]; scenarios: Scenario[] } = {
+  personas: [
+    { id: 'PL-48213', name: 'Amara Okafor', email: 'amara.okafor@maplecrest.test', last4: '6417', status: 'active', transactions: [] },
+    { id: 'PL-51907', name: 'Mateo Alvarez', email: 'mateo.alvarez@maplecrest.test', last4: '3058', status: 'frozen', transactions: [] },
+    { id: 'PL-36642', name: 'Mei-Lin Tan', email: 'meilin.tan@maplecrest.test', last4: '9126', status: 'active', transactions: [] },
   ],
-  'OpenAI': [
-    { id: 'gpt-4o-mini', name: 'GPT-4o Mini', cost: 'Low' },
-    { id: 'gpt-4o', name: 'GPT-4o', cost: 'Medium' },
-    { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', cost: 'High' },
-  ],
-  'Anthropic': [
-    { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', cost: 'High' },
-    { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', cost: 'Low' },
-  ],
-  'Ollama (Local)': [
-    { id: 'qwen2.5:0.5b', name: 'Qwen 2.5 0.5B', cost: 'Free' },
-    { id: 'qwen2.5:1.5b', name: 'Qwen 2.5 1.5B', cost: 'Free' },
-    { id: 'qwen2.5:3b', name: 'Qwen 2.5 3B', cost: 'Free' },
-    { id: 'qwen2.5:7b', name: 'Qwen 2.5 7B', cost: 'Free' },
+  scenarios: [
+    { id: 'spotify', title: 'Refund a Spotify charge', emoji: '🎧', persona: 'PL-48213', expect: 'Refunded instantly', message: 'Hi, I was charged twice for Spotify (TXN-58214). Email amara.okafor@maplecrest.test, card ending 6417.' },
+    { id: 'overlimit', title: 'Over-limit refund', emoji: '💸', persona: 'PL-48213', expect: 'Handed to a specialist', message: 'Please refund my $120 Zara order TXN-58241. amara.okafor@maplecrest.test, card 6417' },
+    { id: 'frozen', title: 'My card is frozen', emoji: '🧊', persona: 'PL-51907', expect: 'Reason explained + specialist', message: 'Why is my card frozen? mateo.alvarez@maplecrest.test, card 3058' },
+    { id: 'fraud', title: 'Report fraud', emoji: '🚨', persona: 'PL-36642', expect: 'Escalated, no auto-refund', message: "I didn't make the $50 Lyft charge TXN-73325. meilin.tan@maplecrest.test, card 9126" },
   ],
 };
 
-export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([]);
+const AVATAR: Record<string, string> = { 'PL-48213': '👩🏾', 'PL-51907': '🧑🏽', 'PL-36642': '👩🏻‍💼' };
+
+export default function Support() {
+  const chat = useChat();
+  const [cat, setCat] = useState(FALLBACK);
+  const [persona, setPersona] = useState<string>('PL-48213');
+  const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
-  const [demoMode, setDemoMode] = useState(false);
-  const [chatState, setChatState] = useState<string | null>(null);
-  
-  // Configuration state
-  const [showConfig, setShowConfig] = useState(true);
-  const [showDemoInfo, setShowDemoInfo] = useState(true);
-  const [showToolCalls, setShowToolCalls] = useState(false);
-  const [showQuickHelp, setShowQuickHelp] = useState(false);
-  const [config, setConfig] = useState<Config>({
-    model: 'openai/gpt-4o-mini',
-    provider: 'OpenRouter',
-    temperature: 0,        // Optimal: 0 for deterministic, consistent responses
-    maxTokens: 4096,       // Optimal: Sufficient for multi-turn conversations
-  });
-  const [testResults, setTestResults] = useState<any>(null);
+  const [copied, setCopied] = useState('');
+  const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const sendMessage = useCallback(async () => {
-    if (!input.trim() || loading) return;
+  useEffect(() => { fetch('/api/scenarios').then(r => r.json()).then(d => d?.personas && setCat(d)).catch(() => {}); }, []);
+  useEffect(() => { if (window.innerWidth >= 900) setOpen(true); }, []);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chat.messages, chat.loading]);
 
-    const userMessage = input;
-    setInput('');
-    
-    // Immediately show user message
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setLoading(true);
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: userMessage, 
-          state: chatState,
-          config: config,
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (data.error) {
-        setMessages(prev => [...prev, 
-          { role: 'assistant', content: `Error: ${data.error}` }
-        ]);
-      } else {
-        // Update with full conversation from server
-        setMessages(data.messages || []);
-        setChatState(data.state || null);
-        setToolCalls(data.tool_calls || []);
-        setDemoMode(data.demo_mode || false);
-      }
-    } catch (err) {
-      setMessages(prev => [...prev,
-        { role: 'assistant', content: `Error: ${err instanceof Error ? err.message : 'Network error'}` }
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  }, [input, loading, chatState, config]);
-
-  const resetChat = useCallback(() => {
-    setMessages([]);
-    setToolCalls([]);
-    setChatState(null);
-    setDemoMode(false);
-  }, []);
-
-  const setExampleMessage = useCallback((message: string) => {
-    setInput(message);
-  }, []);
-
-  const runQuickTest = useCallback(async () => {
-    setLoading(true);
-    setTestResults(null);
-    try {
-      const testCases = [
-        { message: 'Refund T100. aisha@example.com 4242', expected: 'refunded' },
-        { message: 'Refund T102. aisha@example.com 4242', expected: 'escalated' },
-        { message: 'Refund T300. aisha@example.com 4242', expected: 'blocked' },
-      ];
-
-      const results = [];
-      for (const test of testCases) {
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: test.message, state: null, config: config }),
-        });
-        const data = await response.json();
-        results.push({
-          test: test.message,
-          expected: test.expected,
-          response: data.messages?.[data.messages.length - 1]?.content || 'error',
-          tool_calls: data.tool_calls || [],
-        });
-      }
-      setTestResults(results);
-    } catch (err) {
-      alert('Test failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    } finally {
-      setLoading(false);
-    }
-  }, [config]);
+  const p = cat.personas.find(x => x.id === persona) || cat.personas[0];
+  const runScenario = (sc: Scenario) => { if (sc.persona) setPersona(sc.persona); setOpen(true); chat.send(sc.message); };
+  const send = () => { const t = input.trim(); if (!t || chat.loading) return; setInput(''); chat.send(t); };
+  const useMyDetails = () => { setOpen(true); setInput(`Hi, my email is ${p.email} and my card ends in ${p.last4}.`); setTimeout(() => inputRef.current?.focus(), 50); };
+  const copy = (v: string) => { navigator.clipboard?.writeText(v); setCopied(v); setTimeout(() => setCopied(''), 1200); };
 
   return (
-    <div className={styles.container}>
+    <div className={`${s.page} ${open ? s.withWidget : ''}`}>
       <Head>
-        <title>Paylane Support Agent - Demo</title>
-        <link rel="icon" href="/favicon.ico" />
+        <title>Paylane Help Center</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
+      <div className={s.bg} aria-hidden />
 
-      {/* Left Sidebar - Configuration */}
-      <aside className={styles.leftSidebar}>
-        <div className={styles.sidebarHeader}>
-          <h2>⚙️ Model Settings</h2>
-          <button onClick={() => setShowConfig(!showConfig)}>
-            {showConfig ? '−' : '+'}
-          </button>
+      <nav className={s.nav}>
+        <div className={s.logo}><span>P</span>Paylane</div>
+        <div className={s.navLinks}>
+          <a>Cards</a><a>Payments</a><a className={s.active}>Help</a>
         </div>
+        <Link href="/admin" className={s.devLink}>Developer view ⚙</Link>
+      </nav>
 
-        {showConfig && (
-          <div className={styles.configPanel}>
-            <div className={styles.configSection}>
-              <label>Provider</label>
-              <select 
-                value={config.provider} 
-                onChange={(e) => {
-                  const provider = e.target.value;
-                  const firstModel = MODELS[provider as keyof typeof MODELS][0].id;
-                  setConfig({ ...config, provider, model: firstModel });
-                }}
-              >
-                {Object.keys(MODELS).map(p => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </div>
+      <header className={s.hero}>
+        <div className={s.badge}>● Support is online · avg reply in seconds</div>
+        <h1>Hi there, how can we <em>help?</em></h1>
+        <p>Refunds, card freezes and suspicious charges, sorted in one chat. Pick a topic or start a conversation.</p>
+        <button className={s.cta} onClick={() => { setOpen(true); setTimeout(() => inputRef.current?.focus(), 50); }}>💬 Chat with support</button>
+      </header>
 
-            <div className={styles.configSection}>
-              <label>Model</label>
-              <select 
-                value={config.model} 
-                onChange={(e) => setConfig({ ...config, model: e.target.value })}
-              >
-                {MODELS[config.provider as keyof typeof MODELS]?.map(m => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} ({m.cost})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className={styles.configSection}>
-              <label>Temperature: {config.temperature} {config.temperature === 0 && '(✓ Optimal)'}</label>
-              <input 
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.1" 
-                value={config.temperature}
-                onChange={(e) => setConfig({ ...config, temperature: parseFloat(e.target.value) })}
-              />
-              <small>0 (default) = consistent responses. Higher = more creative.</small>
-            </div>
-
-            <div className={styles.configSection}>
-              <label>Max Tokens {config.maxTokens === 4096 && '(✓ Optimal)'}</label>
-              <input 
-                type="number" 
-                value={config.maxTokens} 
-                onChange={(e) => setConfig({ ...config, maxTokens: parseInt(e.target.value) })}
-                min="256"
-                max="32768"
-              />
-              <small>4096 (default) = sufficient for conversations.</small>
-            </div>
-
-            <div className={styles.configActions}>
-              <button onClick={runQuickTest} disabled={loading}>
-                Quick Test
+      <main className={s.grid}>
+        <section className={s.topics}>
+          <h2>Popular topics <small>tap to try it live</small></h2>
+          <div className={s.cards}>
+            {cat.scenarios.map((sc, i) => (
+              <button key={sc.id} className={s.card} style={{ animationDelay: `${i * 50}ms` }} onClick={() => runScenario(sc)} disabled={chat.loading}>
+                <span className={s.emoji}>{sc.emoji}</span>
+                <b>{sc.title}</b>
+                <span className={s.expect}>{sc.expect}</span>
+                <span className={s.go}>Ask now →</span>
               </button>
-              <button onClick={resetChat}>Reset Chat</button>
-            </div>
-
-            {testResults && (
-              <div className={styles.testResults}>
-                <h3>Test Results</h3>
-                {testResults.map((r: any, i: number) => (
-                  <div key={i} className={styles.testResult}>
-                    <div><strong>Test:</strong> {r.test}</div>
-                    <div><strong>Expected:</strong> {r.expected}</div>
-                    <div><strong>Tools:</strong> {r.tool_calls.length} calls</div>
-                    <div className={styles.testResponse}>{r.response.substring(0, 100)}...</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className={styles.debugSection}>
-          <label>
-            <input 
-              type="checkbox" 
-              checked={showToolCalls} 
-              onChange={(e) => setShowToolCalls(e.target.checked)} 
-            />
-            Show Internal Tool Calls
-          </label>
-          <small>For testing/debugging only</small>
-        </div>
-
-        <div className={styles.sidebarStats}>
-          <h3>📊 Session Stats</h3>
-          <div><span>Messages:</span> <strong>{messages.length}</strong></div>
-          <div><span>Tool Calls:</span> <strong>{toolCalls.length}</strong></div>
-          <div><span>Mode:</span> <strong>{demoMode ? '🎭 Demo' : '🔴 Live'}</strong></div>
-          <div><span>Model:</span> <strong>{config.model.split('/').pop()}</strong></div>
-        </div>
-      </aside>
-
-      {/* Right Sidebar - Demo Info */}
-      <aside className={styles.rightSidebar}>
-        <div className={styles.sidebarHeader}>
-          <h2>💡 Demo Information</h2>
-          <button onClick={() => setShowDemoInfo(!showDemoInfo)}>
-            {showDemoInfo ? '−' : '+'}
-          </button>
-        </div>
-
-        {showDemoInfo && (
-          <>
-            <div className={styles.demoSection}>
-              <h3>📝 What This Is</h3>
-              <p>Interactive demo of an AI-powered customer support agent for Paylane (fintech).</p>
-              <p><strong>Features:</strong></p>
-              <ul>
-                <li>Automated refund processing</li>
-                <li>Policy enforcement ($75 limit, 30 days)</li>
-                <li>Fraud detection & escalation</li>
-                <li>Multi-turn conversation memory</li>
-              </ul>
-            </div>
-
-            <div className={styles.demoSection}>
-              <h3>🧪 Try These Examples</h3>
-              <div className={styles.exampleButtons}>
-                <button onClick={() => setExampleMessage('Hi, I was charged for Spotify twice. Transaction T100. Email aisha@example.com, card 4242')}>
-                  ✅ Simple Refund
-                </button>
-                <button onClick={() => setExampleMessage('Refund my Zara purchase T102. aisha@example.com 4242')}>
-                  ❌ Over Limit ($120)
-                </button>
-                <button onClick={() => setExampleMessage('Refund T200 please. ben@example.com 1881')}>
-                  🔒 Frozen Card
-                </button>
-                <button onClick={() => setExampleMessage('T301 is fraud! I never made it. chen@example.com 0007')}>
-                  ⚠️ Fraud Claim
-                </button>
-                <button onClick={() => setExampleMessage('I want a refund')}>
-                  ❓ Vague Request
-                </button>
-              </div>
-            </div>
-
-            <div className={styles.demoSection}>
-              <h3>👥 Test Accounts</h3>
-              <div className={styles.account}>
-                <strong>Aisha Khan</strong><br/>
-                Email: aisha@example.com<br/>
-                Card: ending 4242<br/>
-                Status: Active ✅
-              </div>
-              <div className={styles.account}>
-                <strong>Ben Ortiz</strong><br/>
-                Email: ben@example.com<br/>
-                Card: ending 1881<br/>
-                Status: Frozen 🔒
-              </div>
-              <div className={styles.account}>
-                <strong>Chen Wei</strong><br/>
-                Email: chen@example.com<br/>
-                Card: ending 0007<br/>
-                Status: Active ✅
-              </div>
-            </div>
-
-            <div className={styles.demoSection}>
-              <h3>💳 Sample Transactions</h3>
-              <div className={styles.transaction}>
-                <strong>T100</strong>: Spotify $42.50 (Oct 1)<br/>
-                <small>✅ Eligible for refund</small>
-              </div>
-              <div className={styles.transaction}>
-                <strong>T102</strong>: Zara $120.00 (Oct 3)<br/>
-                <small>❌ Over $75 limit</small>
-              </div>
-              <div className={styles.transaction}>
-                <strong>T103</strong>: Netflix $30.00 (Aug 20)<br/>
-                <small>❌ Over 30 days old</small>
-              </div>
-              <div className={styles.transaction}>
-                <strong>T200</strong>: Steam $60.00 (Oct 4)<br/>
-                <small>🔒 Ben's frozen card</small>
-              </div>
-            </div>
-
-            <div className={styles.demoSection}>
-              <h3>📚 Learn More</h3>
-              <a href="/evals" target="_blank">View Eval Results →</a><br/>
-              <a href="https://github.com/priyansh19/fini-custmsup-agent" target="_blank">GitHub Repo →</a>
-            </div>
-          </>
-        )}
-      </aside>
-
-      <main className={styles.main}>
-        <header className={styles.header}>
-          <h1>💬 Paylane Support Agent</h1>
-          <div className={styles.headerRight}>
-            {demoMode && <span className={styles.demoBanner}>🎭 Demo Mode</span>}
-            <button onClick={resetChat} className={styles.newChatBtn}>New Chat</button>
-          </div>
-        </header>
-
-        <div className={styles.chat}>
-          {messages.filter(m => m.role === 'user' || m.role === 'assistant').length === 0 && (
-            <div className={styles.welcomeMessage}>
-              <h2>👋 Welcome to Paylane Support</h2>
-              <p>I'm here to help with refunds, account questions, and transaction issues.</p>
-              <p className={styles.welcomeHint}>
-                <strong>Tip:</strong> Click an example on the right to get started →
-              </p>
-            </div>
-          )}
-          {messages
-            .filter(msg => 
-              (msg.role === 'user' || msg.role === 'assistant') && 
-              msg.content && 
-              msg.content.trim().length > 0
-            )
-            .map((msg, idx) => (
-            <div key={idx} className={`${styles.message} ${styles[msg.role]}`}>
-              <div className={styles.messageMeta}>
-                {msg.role === 'user' ? '👤 You' : '🤖 Support Agent'}
-              </div>
-              <div className={styles.messageContent}>
-                {msg.content}
-              </div>
-            </div>
-          ))}
-          {loading && (
-            <div className={`${styles.message} ${styles.assistant}`}>
-              <div className={styles.messageMeta}>🤖 Support Agent</div>
-              <div className={styles.messageContent}>
-                <span className={styles.loading}>Typing...</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {showToolCalls && toolCalls.length > 0 && (
-          <details className={styles.toolCalls}>
-            <summary>🔧 Internal Tool Calls ({toolCalls.length}) - Debug View</summary>
-            {toolCalls.map((call, idx) => (
-              <div key={idx} className={styles.toolCall}>
-                <div className={styles.toolName}>{call.name}</div>
-                <div className={styles.toolArgs}>
-                  {JSON.stringify(call.arguments, null, 2)}
-                </div>
-                <div className={styles.toolResult}>
-                  → {JSON.stringify(call.result, null, 2)}
-                </div>
-              </div>
             ))}
-          </details>
-        )}
-
-        <div className={styles.inputArea}>
-          <button 
-            className={styles.helpButton}
-            onClick={() => setShowQuickHelp(!showQuickHelp)}
-            title="Quick Help"
-          >
-            ?
-          </button>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            placeholder="Type your message..."
-            disabled={loading}
-            autoFocus
-          />
-          <button onClick={sendMessage} disabled={loading || !input.trim()}>
-            Send
-          </button>
-        </div>
-
-        {/* Quick Help Tooltip */}
-        {showQuickHelp && (
-          <div className={styles.quickHelpTooltip}>
-            <div className={styles.tooltipHeader}>
-              <h3>🧪 Quick Testing Guide</h3>
-              <button onClick={() => setShowQuickHelp(false)}>×</button>
-            </div>
-            
-            <div className={styles.tooltipSection}>
-              <h4>📧 Test Accounts</h4>
-              <div className={styles.helpCard}>
-                <strong>Aisha Khan (Active)</strong>
-                <div className={styles.helpDetail}>Email: <code>aisha@example.com</code></div>
-                <div className={styles.helpDetail}>Card: <code>4242</code></div>
-              </div>
-              <div className={styles.helpCard}>
-                <strong>Ben Ortiz (Frozen)</strong>
-                <div className={styles.helpDetail}>Email: <code>ben@example.com</code></div>
-                <div className={styles.helpDetail}>Card: <code>1881</code></div>
-              </div>
-              <div className={styles.helpCard}>
-                <strong>Chen Wei (Active)</strong>
-                <div className={styles.helpDetail}>Email: <code>chen@example.com</code></div>
-                <div className={styles.helpDetail}>Card: <code>0007</code></div>
-              </div>
-            </div>
-
-            <div className={styles.tooltipSection}>
-              <h4>💳 Sample Transactions</h4>
-              <div className={styles.helpCard}>
-                <strong>T100</strong> - Spotify $42.50 <span className={styles.eligible}>✅ Eligible</span>
-              </div>
-              <div className={styles.helpCard}>
-                <strong>T102</strong> - Zara $120.00 <span className={styles.notEligible}>❌ Over limit</span>
-              </div>
-              <div className={styles.helpCard}>
-                <strong>T103</strong> - Netflix $30.00 <span className={styles.notEligible}>❌ Too old</span>
-              </div>
-            </div>
-
-            <div className={styles.tooltipSection}>
-              <h4>💬 Example Format</h4>
-              <div className={styles.exampleFormat}>
-                "Refund <strong>T100</strong>. Email <strong>aisha@example.com</strong>, card ending <strong>4242</strong>"
-              </div>
-            </div>
-
-            <div className={styles.tooltipFooter}>
-              Click examples in right sidebar for pre-filled messages →
-            </div>
           </div>
-        )}
+        </section>
+
+        <aside className={s.personaBox}>
+          <h2>Demo customer</h2>
+          <div className={s.personaTabs}>
+            {cat.personas.map(x => (
+              <button key={x.id} className={`${s.ptab} ${x.id === persona ? s.ptabOn : ''}`} onClick={() => setPersona(x.id)}>
+                <span>{AVATAR[x.id] || '🙂'}</span>{x.name.split(' ')[0]}
+              </button>
+            ))}
+          </div>
+          <div className={s.idCard}>
+            <div className={s.idTop}>
+              <div><div className={s.idName}>{p.name}</div><div className={`${s.status} ${p.status === 'frozen' ? s.frozen : ''}`}>{p.status === 'frozen' ? '🧊 Card frozen' : '● Active'}</div></div>
+              <div className={s.chipArt} />
+            </div>
+            <div className={s.cred} onClick={() => copy(p.email)}><span>Email</span><code>{p.email}</code><i>{copied === p.email ? '✓' : 'copy'}</i></div>
+            <div className={s.cred} onClick={() => copy(p.last4)}><span>Card</span><code>•••• •••• •••• {p.last4}</code><i>{copied === p.last4 ? '✓' : 'copy'}</i></div>
+            <button className={s.useBtn} onClick={useMyDetails}>Use these details in chat</button>
+          </div>
+          {p.transactions.length > 0 && (
+            <div className={s.txns}>
+              <h3>Recent activity</h3>
+              {p.transactions.map(t => (
+                <div key={t.id} className={s.txn}>
+                  <code>{t.id}</code><span className={s.merchant}>{t.merchant}<small>{t.date.slice(5)}{t.status === 'pending' ? ' · pending' : ''}</small></span>
+                  <b>${t.amount.toFixed(2)}</b>
+                  <em className={/specialist/.test(t.hint) ? s.hintBad : s.hintOk}>{t.hint}</em>
+                </div>
+              ))}
+            </div>
+          )}
+        </aside>
       </main>
+
+      <footer className={s.footer}>Demo for the Fini take-home · mock data only · <Link href="/admin">Developer / evaluator view</Link></footer>
+
+      {/* Messenger widget */}
+      {!open && <button className={s.launcher} onClick={() => setOpen(true)} aria-label="Open chat">💬<span className={s.ping} /></button>}
+      <div className={`${s.widget} ${open ? s.widgetOpen : ''}`} role="dialog" aria-label="Paylane support chat">
+        <div className={s.wHead}>
+          <div className={s.agentAv}>P<span className={s.online} /></div>
+          <div><b>Paylane Support</b><small>{chat.loading ? 'typing…' : chat.demoMode ? 'Demo mode' : 'Online · AI assistant'}</small></div>
+          <button onClick={chat.reset} title="New conversation" className={s.wBtn}>↺</button>
+          <button onClick={() => setOpen(false)} title="Minimise" className={s.wBtn}>—</button>
+        </div>
+        <div className={s.thread}>
+          <div className={`${s.row} ${s.agent}`}><div className={s.bubble}>Hi! 👋 I'm Paylane's support assistant. I can help with refunds, frozen cards and charges you don't recognise. To get started, share your <b>email</b> and your card's <b>last 4 digits</b>.</div></div>
+          {chat.messages.length === 0 && (
+            <div className={s.quick}>
+              {cat.scenarios.slice(0, 4).map(sc => <button key={sc.id} onClick={() => runScenario(sc)}>{sc.emoji} {sc.title}</button>)}
+            </div>
+          )}
+          {chat.messages.map((m, i) => (
+            <div key={i} className={`${s.row} ${m.role === 'user' ? s.user : s.agent}`}><div className={s.bubble}>{m.content}</div></div>
+          ))}
+          {chat.loading && <div className={`${s.row} ${s.agent}`}><div className={`${s.bubble} ${s.typing}`}><i /><i /><i /></div></div>}
+          <div ref={endRef} />
+        </div>
+        <div className={s.composer}>
+          <button className={s.idBtn} onClick={useMyDetails} title={`Insert ${p.name}'s details`}>{AVATAR[p.id] || '🙂'}</button>
+          <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)} placeholder="Write a message…"
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); send(); } }} disabled={chat.loading} />
+          <button className={s.send} onClick={send} disabled={chat.loading || !input.trim()} aria-label="Send">➤</button>
+        </div>
+        <div className={s.powered}>Secured by guardrails · refunds ≤ $75 within 30 days</div>
+      </div>
     </div>
   );
 }

@@ -17,8 +17,9 @@ import base64, hashlib, hmac
 # in-memory "default" session would leak one visitor's verified chat to another.
 # So conversation state round-trips through the client as an HMAC-signed blob:
 # the client can store it but cannot forge verification, refunds or tool results.
-os.environ.setdefault("OPENROUTER_RETRIES", "3")   # stay inside the 60s function limit
+os.environ.setdefault("OPENROUTER_RETRIES", "4")   # stay inside the 60s function limit
 MAX_STATE_BYTES = 400_000
+ALLOWED_MODELS = {"openai/gpt-4o-mini", "google/gemini-2.5-flash-lite", "openai/gpt-4.1-nano"}
 
 
 def _secret() -> bytes:
@@ -73,30 +74,18 @@ class handler(BaseHTTPRequestHandler):
                 return
             message = message.strip()
 
-            # Get configuration from request
-            config = data.get('config', {}) if isinstance(data, dict) else {}
-            model = config.get('model')
-            provider_name = config.get('provider')
-            temperature = config.get('temperature', 0)
-            
-            # Override environment variables temporarily if config specified
-            if model and provider_name:
-                if provider_name == 'OpenRouter':
-                    os.environ['PAYLANE_PROVIDER'] = 'openrouter'
-                    os.environ['OPENROUTER_MODEL'] = model
-                elif provider_name == 'OpenAI':
-                    os.environ['PAYLANE_PROVIDER'] = 'openai'
-                    os.environ['PAYLANE_MODEL'] = model
-                elif provider_name == 'Anthropic':
-                    os.environ['PAYLANE_PROVIDER'] = 'anthropic'
-                    os.environ['PAYLANE_MODEL'] = model
-                elif provider_name == 'Ollama (Local)':
-                    os.environ['PAYLANE_PROVIDER'] = 'ollama'
-                    os.environ['PAYLANE_MODEL'] = model
-            
+            # Per-request model choice from the UI. Never mutate os.environ (it persists on warm
+            # serverless instances and leaked one visitor's choice into everyone's requests), and
+            # only allow cheap OpenRouter models so the key can't be spent on arbitrary models.
+            config = data.get('config') if isinstance(data.get('config'), dict) else {}
+            requested_model = config.get('model')
+            model_override = requested_model if requested_model in ALLOWED_MODELS else None
+
             has_key = any(os.getenv(k) for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY"))
             if has_key:
                 provider, demo_mode = from_env(), False
+                if model_override and hasattr(provider, "model") and os.getenv("OPENROUTER_API_KEY"):
+                    provider.model = model_override
             else:
                 from evals.scenarios import SCENARIOS
                 provider, demo_mode = ScriptedProvider(SCENARIOS[0]["script"]), True
@@ -116,7 +105,7 @@ class handler(BaseHTTPRequestHandler):
                 # Filter messages for customer-facing UI: only user and assistant with actual text content
                 filtered_messages = [
                     m for m in agent.messages 
-                    if m.get('role') in ('user', 'assistant') and m.get('content', '').strip()
+                    if m.get('role') in ('user', 'assistant') and (m.get('content') or '').strip()
                 ]
                 
                 self._send_json({

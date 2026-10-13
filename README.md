@@ -118,7 +118,7 @@ The live harness `tests/live/` sends 138 distinct cases to `/api/chat`, the same
 | B (2 runs each) | 266/276 (96.4%) |
 | C | 136/138 (98.6%); 137/138 cases fixed after the recheck |
 
-Remaining failure: t03. An ambiguous "I was going to ask for a refund on T100..." gets refunded.
+Remaining failure: t03. An ambiguous "I was going to ask for a refund on TXN-58214..." gets refunded.
 
 Details are in `docs/live_test_report.md` and `docs/failure_log.md`.
 
@@ -182,34 +182,56 @@ Visit `http://localhost:3000` to test the chat UI and `http://localhost:3000/eva
 
 ## Architecture
 
-### Components
+One Vercel project, split into five logical services. Each has its own module or endpoint and a clear boundary:
 
+```mermaid
+flowchart LR
+  subgraph FE["Frontend (Next.js, web/)"]
+    C["/ Customer help page<br/>+ messenger widget"]
+    A["/admin Developer / evaluator view<br/>model settings, tool calls, quick test"]
+    E["/evals Eval results"]
+  end
+  subgraph GW["API gateway (Python serverless, api/)"]
+    CH["POST /api/chat<br/>validation, signed state, model allowlist"]
+    SC["GET /api/scenarios<br/>personas + scenario cards"]
+    HE["GET /api/health"]
+    EV["GET /api/evals"]
+  end
+  subgraph AG["Agent service (paylane/agent.py, prompt.py)"]
+    LOOP["Tool-calling loop<br/>session note, turn budget"]
+    POL["Policy guardrails (policy.py)<br/>$75 cap, 30 days, $150 / 30d,<br/>fraud lock, verification lockout"]
+  end
+  subgraph TS["Tool service: mock bank (paylane/tools.py, data.py)"]
+    T1["verify_customer · get_customer · get_transaction<br/>issue_refund · escalate_to_human"]
+  end
+  LLM[("LLM provider<br/>OpenRouter: openai/gpt-4o-mini<br/>(providers.py: retries, deadline)")]
+
+  C & A -- "JSON {message, state}" --> CH
+  C --> SC
+  A --> HE
+  E --> EV
+  CH --> LOOP
+  LOOP <--> LLM
+  LOOP --> POL --> T1
+  SC --> T1
 ```
-paylane/
-  ├── prompt.py          System prompt with full rulebook (verification, refunds, escalation)
-  ├── policy.py          Deterministic guardrail: refund_allowed(), verification helpers
-  ├── tools.py           4 mock tools (get_customer, get_transaction, issue_refund, escalate_to_human)
-  ├── data.py            Seeded fake customers/transactions (TODAY = 2026-10-11, fixed on purpose for reproducible time-based rule testing)
-  ├── providers.py       LLM adapters (OpenAI, Anthropic, OpenRouter, Ollama, Scripted for tests)
-  └── agent.py           Tool-calling loop with guardrail enforcement
 
-evals/
-  ├── scenarios/         12 test conversations (plain, edge cases, traps)
-  ├── checks.py          Pass/fail assertions (refund_issued, escalated, no_leak, etc.)
-  └── run.py             Runner: iterate scenarios, run checks, save transcripts + score
+| Service | Where | Responsibility |
+|---|---|---|
+| Frontend | `web/pages/index.tsx` (customer), `web/pages/admin.tsx` (developer), `web/lib/useChat.ts` | UI only. Holds the opaque signed `state` and retries transient 429/5xx failures, resending the same state. |
+| API gateway | `api/chat.py`, `api/scenarios.py`, `api/health.py`, `api/evals.py` | HTTP contract and input validation. HMAC-signs conversation state, so the server needs no memory between requests and the client can't forge it. Only allowlisted cheap models can be chosen. |
+| Agent service | `paylane/agent.py`, `paylane/prompt.py`, `paylane/catalog.py` | LLM ↔ tool loop. Adds the authoritative session note to every model call. Keeps each turn within a 42s budget and turns tool errors into results the model can recover from. |
+| Policy guardrails | `paylane/policy.py` (+ checks in `agent.py`) | Deterministic rules that run before every tool executes. The LLM cannot override them. |
+| Tool service (mock bank) | `paylane/tools.py`, `paylane/data.py` | The 4 spec tools, plus `verify_customer`, over seeded data. Replacing it with a real bank API means swapping this module. |
+| LLM provider | `paylane/providers.py` | OpenRouter, OpenAI, Anthropic, Ollama and a scripted provider for tests. OpenRouter calls get a per-call timeout, fast backoff and an overall deadline, and malformed tool JSON is tolerated. |
 
-tests/
-  ├── test_policy.py     Guardrail logic (rules, blocking rogue LLM, no double refund)
-  └── test_scenarios.py  Scripted LLM tests (pytest harness)
-
-docs/
-  ├── customer_note.md   Plain-language email to Paylane head of support
-  └── failure_log.md     Documented LLM failure + fix + re-run score
-
-transcripts/           JSON output from evals.run (messages, tool calls, checks)
-
-web/                   Next.js UI + Vercel deployment (see below)
-```
+### API contract
+- `POST /api/chat`
+  - Request: `{"message": str, "state": str|null, "config"?: {"model": str}}`
+  - Response: `{"reply", "messages", "tool_calls", "state", "demo_mode"}`
+  - Errors: 400 for invalid input or tampered state. 503 for a temporary provider failure; the state is returned unchanged, so a retry is safe.
+- `GET /api/scenarios` returns `{personas, scenarios, policy}`.
+- `GET /api/health` returns `{status, provider, model, llm_key_configured}`.
 
 ### Two-Layer Policy Enforcement
 
@@ -233,7 +255,7 @@ web/                   Next.js UI + Vercel deployment (see below)
 1. Customer provides email + last 4 digits
 2. Agent calls `verify_customer(email, last4)`
 3. Helper `check_verification()` scans customers, returns customer_id if match (else None)
-4. Session state updated: `{"verified": true, "customer_id": "C001"}`
+4. Session state updated: `{"verified": true, "customer_id": "PL-48213"}`
 5. All subsequent account tools (get_transaction, issue_refund) require verification
 
 No separate verify endpoint in the spec — verification is the agent's responsibility (comparing provided details against `get_customer` results or using the added `verify_customer` helper).
@@ -287,7 +309,7 @@ Based on customer-support best practices and the provided guidance:
 
 7. **Pre-Verification Lockdown:** Before verification succeeds, reveal nothing — not account existence, not frozen status, not transaction details.
    
-   *Rationale:* Prevents information harvesting. "Does aisha@example.com have an account?" should get no signal.
+   *Rationale:* Prevents information harvesting. "Does amara.okafor@maplecrest.test have an account?" should get no signal.
 
 8. **Frozen Cards:** No refunds on frozen cards. Explain freeze reason (after verification), always escalate.
    
@@ -337,3 +359,15 @@ The 16 test scenarios cover:
 - Write the real system prompt/rulebook (`paylane/prompt.py`).
 - Expanded to 16 scenarios (angry customer, account closure, legal threat, jailbreak attempts, fake authority, split refunds, verification brute-force).
 - Run with a real model, document one failure + fix (`docs/failure_log.md`), write `docs/customer_note.md`.
+
+## Demo customers (fictional seed data)
+
+All people, emails and cards below are made up. `maplecrest.test` is a reserved `.test` domain, so nothing can be delivered there. The date is fixed at `TODAY = 2026-10-11` in `paylane/data.py`.
+
+| Customer ID | Name | Email | Card last 4 | Status | Key transactions |
+|---|---|---|---|---|---|
+| PL-48213 | Amara Okafor | amara.okafor@maplecrest.test | 6417 | active | TXN-58214 Spotify $42.50 (eligible), TXN-58237 Uber $75.00 (cap boundary), TXN-58241 Zara $120 (over cap), TXN-57106 Netflix $30 (too old), TXN-57552 Starbucks (exactly 30 days, excluded), TXN-58306 Amazon $15 (pending), TXN-58219 Apple $25 (partial), TXN-58277 Uniqlo $32.50 (hits the $150 rolling limit) |
+| PL-51907 | Mateo Alvarez | mateo.alvarez@maplecrest.test | 3058 | frozen | TXN-61450 Steam $60 |
+| PL-36642 | Mei-Lin Tan | meilin.tan@maplecrest.test | 9126 | active | TXN-73318 CoinVault Exchange $900, TXN-73325 Lyft $50 (fraud claims) |
+
+"Already refunded" is tested by refunding the same transaction twice in one chat.

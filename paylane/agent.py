@@ -12,6 +12,7 @@ VERIFY_SPEC = {"name": "verify_customer", "description": "Check the email + card
 
 MAX_STEPS = 8
 MAX_USER_CHARS = 4000
+TURN_BUDGET_S = 42   # whole-turn budget, inside Vercel's 60s function limit
 FRAUD_RE = re.compile(r"fraud|unauthori[sz]ed|stol(e|en)|didn'?t (make|authori[sz]e)|did not (make|authori[sz]e)|wasn'?t me|not me|hacked|someone (used|took|charged)|scam", re.I)
 TIMELINE_RE = re.compile(r"(follow(?:s|ing)?[- ]up|get back to you|contact you|reach out|be in touch|respond)([^.!?\n]*?)\b(today|tonight|tomorrow|shortly|soon|right away|asap|within [^.!?,\n]*?(?:minutes?|hours?|days?)|in (?:a few|\d+) (?:minutes?|hours?|days?)|by (?:end of|eod|close of)[^.!?,\n]*)", re.I)
 
@@ -21,6 +22,11 @@ def sanitize_reply(text: str) -> str:
     if not text:
         return text
     return TIMELINE_RE.sub(lambda m: m.group(1) + m.group(2).rstrip() + " by email", text)
+
+
+def normalize_txn_id(raw):
+    m = re.search(r'(?i)\btxn[\s_-]*(\d{4,6})\b', str(raw))
+    return f"TXN-{m.group(1)}" if m else str(raw).strip()
 
 
 class Agent:
@@ -58,7 +64,7 @@ class Agent:
         summary = str(args.get("summary", ""))
         if self.MUST_ESCALATE_RE.search(summary) or not self.POLICY_REASON_RE.search(summary):
             return None
-        for tid in {m.upper() for m in re.findall(r"[Tt]\d+", summary)}:
+        for tid in {normalize_txn_id(m) for m in re.findall(r"(?i)\btxn[\s_-]*\d{4,6}\b", summary)}:
             t = self.store.transactions.get(tid)
             if not t or t["customer_id"] != self.session["customer_id"]:
                 continue
@@ -92,6 +98,20 @@ class Agent:
                 "tell_customer": "A specialist will follow up by email."}
 
     def _run_tool(self, name, args):
+        """Reliability wrapper: a bad tool call becomes an error result the model can recover from,
+        never an exception that kills the customer's turn."""
+        if not isinstance(args, dict) or "_malformed_arguments" in args:
+            res = {"error": "malformed_arguments: send valid JSON arguments"}
+            self.store.calls.append((name, args if isinstance(args, dict) else {}, res))
+            return res
+        try:
+            return self._run_tool_inner(name, args)
+        except Exception as e:  # noqa: BLE001
+            res = {"error": f"tool_failed: {type(e).__name__}"}
+            self.store.calls.append((name, args, res))
+            return res
+
+    def _run_tool_inner(self, name, args):
         # SECURITY: After 3 failed verification attempts, lock verification and force escalation
         if name == "verify_customer":
             if self.session["verification_locked"]:
@@ -130,11 +150,8 @@ class Agent:
         elif name == "get_transaction" and not self.session.get("verified"):
             res = {"error": "verify_customer_first"}
         elif name == "get_transaction":
-            # Normalize transaction ID: extract T\d+ from inputs like "Amazon T105"
-            txn_id = args.get("txn_id", "")
-            match = re.search(r'[Tt]\d+', str(txn_id))
-            if match:
-                args = {**args, "txn_id": match.group(0).upper()}
+            # Normalize transaction ID: "Amazon txn 58306" / "txn58306" -> "TXN-58306"
+            args = {**args, "txn_id": normalize_txn_id(args.get("txn_id", ""))}
             # SECURITY: always scope lookups to the verified customer
             args = {**args, "customer_id": self.session["customer_id"]}
             try:
@@ -155,8 +172,7 @@ class Agent:
             elif self.session.get("fraud_claim"):
                 res = {"ok": False, "reason": "blocked_by_policy:fraud_claim_escalate"}
             else:
-                m = re.search(r'[Tt]\d+', str(args.get("txn_id", "")))
-                args = {**args, "txn_id": m.group(0).upper() if m else args.get("txn_id")}
+                args = {**args, "txn_id": normalize_txn_id(args.get("txn_id", ""))}
                 try: float(args.get("amount", 0))
                 except (TypeError, ValueError): args = {**args, "amount": 0}
                 ok, reason = refund_allowed(self.store, self.session, args.get("txn_id"), float(args.get("amount", 0)))
@@ -187,7 +203,13 @@ class Agent:
         if FRAUD_RE.search(user_text):
             self.session["fraud_claim"] = True   # code guardrail: no auto-refunds once fraud is claimed
         self.messages.append({"role": "user", "content": user_text})
+        import time as _t
+        turn_deadline = _t.monotonic() + TURN_BUDGET_S
         for _ in range(MAX_STEPS):
+            if _t.monotonic() > turn_deadline:
+                text = "Sorry, that took longer than expected on my side. Could you send your last message again?"
+                self.messages.append({"role": "assistant", "content": text})
+                return text
             out = self.provider.complete(self.system + self._session_note(), self.messages, TOOL_SPECS + [VERIFY_SPEC])
             calls = out.get("tool_calls") or []
             self.messages.append({"role": "assistant", "content": out.get("text"), "tool_calls": calls} if calls
