@@ -4,7 +4,16 @@ returns {"text": str|None, "tool_calls": [{"id","name","arguments":dict}]}.
 Messages use a neutral format:
   {"role":"user"|"assistant","content":str, "tool_calls":[...]}  /  {"role":"tool","tool_call_id","name","content":json}
 """
-import json, os
+import json, os, time
+
+
+def _args(raw):
+    """Tolerate malformed tool-call JSON from the model instead of crashing the turn."""
+    try:
+        v = json.loads(raw or "{}")
+        return v if isinstance(v, dict) else {}
+    except (ValueError, TypeError):
+        return {"_malformed_arguments": str(raw)[:200]}
 
 
 class ScriptedProvider:
@@ -37,7 +46,7 @@ class OpenAIProvider:
               tools=[{"type": "function", "function": t} for t in tools], temperature=0)
         msg = r.choices[0].message
         return {"text": msg.content, "tool_calls": [
-            {"id": c.id, "name": c.function.name, "arguments": json.loads(c.function.arguments or "{}")}
+            {"id": c.id, "name": c.function.name, "arguments": _args(c.function.arguments)}
             for c in (msg.tool_calls or [])]}
 
 
@@ -88,7 +97,7 @@ class OllamaProvider:
               tools=[{"type": "function", "function": t} for t in tools], temperature=0)
         msg = r.choices[0].message
         return {"text": msg.content, "tool_calls": [
-            {"id": c.id, "name": c.function.name, "arguments": json.loads(c.function.arguments or "{}")}
+            {"id": c.id, "name": c.function.name, "arguments": _args(c.function.arguments)}
             for c in (msg.tool_calls or [])]}
 
 
@@ -99,10 +108,11 @@ class OpenRouterProvider:
         from openai import OpenAI  # pip install openai
         self.time = time
         self.model = model or os.getenv("OPENROUTER_MODEL", "nvidia/nemotron-3.5-lightning:free")
-        self.retries = int(os.getenv("OPENROUTER_RETRIES", "6"))
+        self.retries = int(os.getenv("OPENROUTER_RETRIES", "4"))
         self.client = OpenAI(
             api_key=os.environ.get("OPENROUTER_API_KEY", ""),
-            base_url="https://openrouter.ai/api/v1"
+            base_url="https://openrouter.ai/api/v1", max_retries=0,
+            default_headers={"HTTP-Referer": "https://fini-custmsup-agent.vercel.app", "X-Title": "Paylane Support Agent"},
         )
 
     def complete(self, system, messages, tools):
@@ -117,25 +127,31 @@ class OpenRouterProvider:
             else:
                 msgs.append({"role": m["role"], "content": m["content"]})
         
-        # Retry with exponential backoff: 5s, 10s, 20s, 40s, 60s, 60s
-        for attempt in range(self.retries):
+        # Reliability: short per-call timeout + fast backoff, bounded by an overall deadline
+        # so a turn finishes well inside Vercel's 60s function limit.
+        deadline = time.monotonic() + float(os.getenv("LLM_DEADLINE_S", "20"))
+        last = None
+        for attempt in range(max(self.retries, 1)):
             try:
                 r = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=msgs,
+                    model=self.model, messages=msgs, temperature=0,
                     tools=[{"type": "function", "function": t} for t in tools],
-                    temperature=0
-                )
+                    timeout=max(5.0, min(25.0, deadline - time.monotonic())))
+                if not r.choices:
+                    raise RuntimeError("empty choices from provider")
                 msg = r.choices[0].message
-                return {"text": msg.content, "tool_calls": [
-                    {"id": c.id, "name": c.function.name, "arguments": json.loads(c.function.arguments or "{}")}
-                    for c in (msg.tool_calls or [])]}
+                calls = [{"id": c.id or f"call_{i}", "name": c.function.name, "arguments": _args(c.function.arguments)}
+                         for i, c in enumerate(msg.tool_calls or [])]
+                if not calls and not (msg.content or "").strip():
+                    raise RuntimeError("empty completion")
+                return {"text": msg.content, "tool_calls": calls}
             except Exception as e:
-                if attempt < self.retries - 1:
-                    wait = min(5 * (2 ** attempt), 60)  # 5, 10, 20, 40, 60, 60
-                    self.time.sleep(wait)
-                else:
-                    raise
+                last = e
+                wait = min(1.5 * (2 ** attempt), 8)
+                if time.monotonic() + wait > deadline - 5:
+                    break
+                time.sleep(wait)
+        raise last or RuntimeError("provider failed")
 
 
 def from_env():

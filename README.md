@@ -182,34 +182,56 @@ Visit `http://localhost:3000` to test the chat UI and `http://localhost:3000/eva
 
 ## Architecture
 
-### Components
+One Vercel project, split into five logical services. Each has its own module or endpoint and a clear boundary:
 
+```mermaid
+flowchart LR
+  subgraph FE["Frontend (Next.js, web/)"]
+    C["/ Customer help page<br/>+ messenger widget"]
+    A["/admin Developer / evaluator view<br/>model settings, tool calls, quick test"]
+    E["/evals Eval results"]
+  end
+  subgraph GW["API gateway (Python serverless, api/)"]
+    CH["POST /api/chat<br/>validation, signed state, model allowlist"]
+    SC["GET /api/scenarios<br/>personas + scenario cards"]
+    HE["GET /api/health"]
+    EV["GET /api/evals"]
+  end
+  subgraph AG["Agent service (paylane/agent.py, prompt.py)"]
+    LOOP["Tool-calling loop<br/>session note, turn budget"]
+    POL["Policy guardrails (policy.py)<br/>$75 cap, 30 days, $150 / 30d,<br/>fraud lock, verification lockout"]
+  end
+  subgraph TS["Tool service: mock bank (paylane/tools.py, data.py)"]
+    T1["verify_customer · get_customer · get_transaction<br/>issue_refund · escalate_to_human"]
+  end
+  LLM[("LLM provider<br/>OpenRouter: openai/gpt-4o-mini<br/>(providers.py: retries, deadline)")]
+
+  C & A -- "JSON {message, state}" --> CH
+  C --> SC
+  A --> HE
+  E --> EV
+  CH --> LOOP
+  LOOP <--> LLM
+  LOOP --> POL --> T1
+  SC --> T1
 ```
-paylane/
-  ├── prompt.py          System prompt with full rulebook (verification, refunds, escalation)
-  ├── policy.py          Deterministic guardrail: refund_allowed(), verification helpers
-  ├── tools.py           4 mock tools (get_customer, get_transaction, issue_refund, escalate_to_human)
-  ├── data.py            Seeded fake customers/transactions (TODAY = 2026-10-11, fixed on purpose for reproducible time-based rule testing)
-  ├── providers.py       LLM adapters (OpenAI, Anthropic, OpenRouter, Ollama, Scripted for tests)
-  └── agent.py           Tool-calling loop with guardrail enforcement
 
-evals/
-  ├── scenarios/         12 test conversations (plain, edge cases, traps)
-  ├── checks.py          Pass/fail assertions (refund_issued, escalated, no_leak, etc.)
-  └── run.py             Runner: iterate scenarios, run checks, save transcripts + score
+| Service | Where | Responsibility |
+|---|---|---|
+| Frontend | `web/pages/index.tsx` (customer), `web/pages/admin.tsx` (developer), `web/lib/useChat.ts` | UI only. Holds the opaque signed `state` and retries transient 429/5xx failures, resending the same state. |
+| API gateway | `api/chat.py`, `api/scenarios.py`, `api/health.py`, `api/evals.py` | HTTP contract and input validation. HMAC-signs conversation state, so the server needs no memory between requests and the client can't forge it. Only allowlisted cheap models can be chosen. |
+| Agent service | `paylane/agent.py`, `paylane/prompt.py`, `paylane/catalog.py` | LLM ↔ tool loop. Adds the authoritative session note to every model call. Keeps each turn within a 42s budget and turns tool errors into results the model can recover from. |
+| Policy guardrails | `paylane/policy.py` (+ checks in `agent.py`) | Deterministic rules that run before every tool executes. The LLM cannot override them. |
+| Tool service (mock bank) | `paylane/tools.py`, `paylane/data.py` | The 4 spec tools, plus `verify_customer`, over seeded data. Replacing it with a real bank API means swapping this module. |
+| LLM provider | `paylane/providers.py` | OpenRouter, OpenAI, Anthropic, Ollama and a scripted provider for tests. OpenRouter calls get a per-call timeout, fast backoff and an overall deadline, and malformed tool JSON is tolerated. |
 
-tests/
-  ├── test_policy.py     Guardrail logic (rules, blocking rogue LLM, no double refund)
-  └── test_scenarios.py  Scripted LLM tests (pytest harness)
-
-docs/
-  ├── customer_note.md   Plain-language email to Paylane head of support
-  └── failure_log.md     Documented LLM failure + fix + re-run score
-
-transcripts/           JSON output from evals.run (messages, tool calls, checks)
-
-web/                   Next.js UI + Vercel deployment (see below)
-```
+### API contract
+- `POST /api/chat`
+  - Request: `{"message": str, "state": str|null, "config"?: {"model": str}}`
+  - Response: `{"reply", "messages", "tool_calls", "state", "demo_mode"}`
+  - Errors: 400 for invalid input or tampered state. 503 for a temporary provider failure; the state is returned unchanged, so a retry is safe.
+- `GET /api/scenarios` returns `{personas, scenarios, policy}`.
+- `GET /api/health` returns `{status, provider, model, llm_key_configured}`.
 
 ### Two-Layer Policy Enforcement
 

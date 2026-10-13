@@ -12,6 +12,7 @@ VERIFY_SPEC = {"name": "verify_customer", "description": "Check the email + card
 
 MAX_STEPS = 8
 MAX_USER_CHARS = 4000
+TURN_BUDGET_S = 42   # whole-turn budget, inside Vercel's 60s function limit
 FRAUD_RE = re.compile(r"fraud|unauthori[sz]ed|stol(e|en)|didn'?t (make|authori[sz]e)|did not (make|authori[sz]e)|wasn'?t me|not me|hacked|someone (used|took|charged)|scam", re.I)
 TIMELINE_RE = re.compile(r"(follow(?:s|ing)?[- ]up|get back to you|contact you|reach out|be in touch|respond)([^.!?\n]*?)\b(today|tonight|tomorrow|shortly|soon|right away|asap|within [^.!?,\n]*?(?:minutes?|hours?|days?)|in (?:a few|\d+) (?:minutes?|hours?|days?)|by (?:end of|eod|close of)[^.!?,\n]*)", re.I)
 
@@ -92,6 +93,20 @@ class Agent:
                 "tell_customer": "A specialist will follow up by email."}
 
     def _run_tool(self, name, args):
+        """Reliability wrapper: a bad tool call becomes an error result the model can recover from,
+        never an exception that kills the customer's turn."""
+        if not isinstance(args, dict) or "_malformed_arguments" in args:
+            res = {"error": "malformed_arguments: send valid JSON arguments"}
+            self.store.calls.append((name, args if isinstance(args, dict) else {}, res))
+            return res
+        try:
+            return self._run_tool_inner(name, args)
+        except Exception as e:  # noqa: BLE001
+            res = {"error": f"tool_failed: {type(e).__name__}"}
+            self.store.calls.append((name, args, res))
+            return res
+
+    def _run_tool_inner(self, name, args):
         # SECURITY: After 3 failed verification attempts, lock verification and force escalation
         if name == "verify_customer":
             if self.session["verification_locked"]:
@@ -187,7 +202,13 @@ class Agent:
         if FRAUD_RE.search(user_text):
             self.session["fraud_claim"] = True   # code guardrail: no auto-refunds once fraud is claimed
         self.messages.append({"role": "user", "content": user_text})
+        import time as _t
+        turn_deadline = _t.monotonic() + TURN_BUDGET_S
         for _ in range(MAX_STEPS):
+            if _t.monotonic() > turn_deadline:
+                text = "Sorry, that took longer than expected on my side. Could you send your last message again?"
+                self.messages.append({"role": "assistant", "content": text})
+                return text
             out = self.provider.complete(self.system + self._session_note(), self.messages, TOOL_SPECS + [VERIFY_SPEC])
             calls = out.get("tool_calls") or []
             self.messages.append({"role": "assistant", "content": out.get("text"), "tool_calls": calls} if calls

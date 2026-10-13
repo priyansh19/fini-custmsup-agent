@@ -17,7 +17,7 @@ import base64, hashlib, hmac
 # in-memory "default" session would leak one visitor's verified chat to another.
 # So conversation state round-trips through the client as an HMAC-signed blob:
 # the client can store it but cannot forge verification, refunds or tool results.
-os.environ.setdefault("OPENROUTER_RETRIES", "3")   # stay inside the 60s function limit
+os.environ.setdefault("OPENROUTER_RETRIES", "4")   # stay inside the 60s function limit
 MAX_STATE_BYTES = 400_000
 ALLOWED_MODELS = {"openai/gpt-4o-mini", "google/gemini-2.5-flash-lite", "openai/gpt-4.1-nano"}
 

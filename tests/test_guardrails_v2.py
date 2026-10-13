@@ -119,3 +119,22 @@ def test_wrongful_escalation_of_eligible_refund_is_bounced():
              tc(4, "escalate_to_human", customer_id="C001", summary="Customer wants a human about T100"), say("x")], "hi")
     r = [c[2] for c in a.store.calls if c[0] == "escalate_to_human"]
     assert r[0].get("ok") is False and "ticket_id" in r[1] and "ticket_id" in r[2]
+
+
+def test_malformed_tool_args_do_not_crash_turn():
+    a = run([{"text": None, "tool_calls": [{"id": "x", "name": "issue_refund", "arguments": {"_malformed_arguments": "{bad"}}]},
+             {"text": None, "tool_calls": [{"id": "y", "name": "issue_refund", "arguments": {"txn_id": "T100", "bogus": 1}}]},
+             say("ok")], "refund")
+    assert a.messages[-1]["content"] == "ok" and not ok_refunds(a)
+
+
+def test_message_filter_handles_none_content(monkeypatch):
+    """Live bug 2026-10-13: assistant tool-call messages have content=None and crashed the API filter."""
+    import api.chat as c, io, json as j
+    h = c.handler.__new__(c.handler)
+    raw = j.dumps({"message": "My email is aisha@example.com and last 4 is 4242"}).encode()
+    h.rfile, h.wfile, h.headers = io.BytesIO(raw), io.BytesIO(), {"Content-Length": str(len(raw))}
+    codes = []; h.send_response = codes.append; h.send_header = lambda *a: None; h.end_headers = lambda: None
+    for k in ("OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"): monkeypatch.delenv(k, raising=False)
+    h.do_POST()   # demo mode -> scripted provider with tool calls
+    assert codes == [200] and j.loads(h.wfile.getvalue())["state"]
