@@ -13,15 +13,26 @@ VERIFY_SPEC = {"name": "verify_customer", "description": "Check the email + card
 MAX_STEPS = 8
 MAX_USER_CHARS = 4000
 TURN_BUDGET_S = 42   # whole-turn budget, inside Vercel's 60s function limit
-FRAUD_RE = re.compile(r"fraud|unauthori[sz]ed|stol(e|en)|didn'?t (make|authori[sz]e)|did not (make|authori[sz]e)|wasn'?t me|not me|hacked|someone (used|took|charged)|scam", re.I)
+FRAUD_RE = re.compile(r"fraud|unauthori[sz]ed|stol(e|en)|didn'?t (make|authori[sz]e)|did not (make|authori[sz]e)|wasn'?t me|not me|hacked|someone (used|took|charged)|scammed|scam (charge|transaction|payment)", re.I)
 TIMELINE_RE = re.compile(r"(follow(?:s|ing)?[- ]up|get back to you|contact you|reach out|be in touch|respond)([^.!?\n]*?)\b(today|tonight|tomorrow|shortly|soon|right away|asap|within [^.!?,\n]*?(?:minutes?|hours?|days?)|in (?:a few|\d+) (?:minutes?|hours?|days?)|by (?:end of|eod|close of)[^.!?,\n]*)", re.I)
+
+SOFT_TIMELINE_RE = re.compile(r"as (?:soon|quickly|fast) as (?:possible|they can|we can)|at the earliest|within (?:the )?(?:next )?(?:\d+|a few|one|two|24|48)\b|\b(?:24|48|72)[- ]?hours?\b|business days?", re.I)
 
 
 def sanitize_reply(text: str) -> str:
     """Code guardrail: never promise a follow-up timeline. Only 'a specialist will follow up by email'."""
     if not text:
         return text
-    return TIMELINE_RE.sub(lambda m: m.group(1) + m.group(2).rstrip() + " by email", text)
+    std = "A specialist will follow up by email."
+    parts = re.split(r"(?<=[.!?])\s+", text)
+    out = []
+    for p in parts:
+        if TIMELINE_RE.search(p) or SOFT_TIMELINE_RE.search(p):
+            p = std
+        if p == std and std in out:
+            continue
+        out.append(p)
+    return " ".join(out)
 
 
 def normalize_txn_id(raw):
@@ -123,6 +134,9 @@ class Agent:
                 cid = check_verification(self.store, args.get("email"), args.get("last4"))
                 res = ({"verified": True, "customer_id": cid} if cid == self.session["customer_id"]
                        else {"verified": False, "error": "already_verified_as_another_customer_restart_chat"})
+            elif not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", str(args.get("email") or "").strip()) or not re.search(r"\d", str(args.get("last4") or "")):
+                # Missing/incomplete credentials are not a failed attempt (don't burn the 3-strike budget)
+                res = {"verified": False, "error": "missing_credentials_ask_for_email_and_card_last4"}
             else:
                 cid = check_verification(self.store, args.get("email"), args.get("last4"))
                 if cid:

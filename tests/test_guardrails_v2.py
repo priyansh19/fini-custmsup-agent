@@ -138,3 +138,26 @@ def test_message_filter_handles_none_content(monkeypatch):
     for k in ("OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"): monkeypatch.delenv(k, raising=False)
     h.do_POST()   # demo mode -> scripted provider with tool calls
     assert codes == [200] and j.loads(h.wfile.getvalue())["state"]
+
+
+def test_sanitize_soft_timelines_replaced_cleanly():
+    from paylane.agent import sanitize_reply
+    out = sanitize_reply("I can't give a date. A specialist will reach out to you as soon as possible. Thanks!")
+    assert "as soon as" not in out and "as by email" not in out
+    assert "A specialist will follow up by email." in out
+    out2 = sanitize_reply("They will contact you within 24 hours.")
+    assert "24" not in out2
+
+
+def test_complaint_word_scam_is_not_fraud():
+    from paylane.agent import FRAUD_RE
+    assert not FRAUD_RE.search("Your app is garbage and your fees are a scam.")
+    assert FRAUD_RE.search("I got scammed, someone used my card")
+
+
+def test_incomplete_credentials_do_not_count_as_failed_attempt():
+    from paylane.agent import Agent
+    a2 = Agent(provider=None)
+    for _ in range(4):
+        r = a2._run_tool("verify_customer", {"email": "amara.okafor@maplecrest.test", "last4": ""})
+    assert a2.session["failed_verifications"] == 0 and not a2.session["verification_locked"]
