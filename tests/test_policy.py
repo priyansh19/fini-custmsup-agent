@@ -141,6 +141,6 @@ def test_transaction_id_normalization():
 
 def test_normalize_txn_id_variants():
     from paylane.agent import normalize_txn_id
-    for raw in ["TXN-58214", "txn-58214", "txn 58214", "Spotify TXN58214", "TXN_58214"]:
+    for raw in ["TXN-58214", "txn-58214", "txn 58214", "Spotify TXN58214", "TXN_58214", "58214", "#58214"]:
         assert normalize_txn_id(raw) == "TXN-58214"
     assert normalize_txn_id("T999") == "T999"
