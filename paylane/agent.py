@@ -24,6 +24,11 @@ def sanitize_reply(text: str) -> str:
     return TIMELINE_RE.sub(lambda m: m.group(1) + m.group(2).rstrip() + " by email", text)
 
 
+def normalize_txn_id(raw):
+    m = re.search(r'(?i)\btxn[\s_-]*(\d{4,6})\b', str(raw))
+    return f"TXN-{m.group(1)}" if m else str(raw).strip()
+
+
 class Agent:
     def __init__(self, provider, store: Store | None = None, system_prompt: str = SYSTEM_PROMPT, guardrail: bool = True):
         self.provider, self.store = provider, store or Store()
@@ -59,7 +64,7 @@ class Agent:
         summary = str(args.get("summary", ""))
         if self.MUST_ESCALATE_RE.search(summary) or not self.POLICY_REASON_RE.search(summary):
             return None
-        for tid in {m.upper() for m in re.findall(r"[Tt]\d+", summary)}:
+        for tid in {normalize_txn_id(m) for m in re.findall(r"(?i)\btxn[\s_-]*\d{4,6}\b", summary)}:
             t = self.store.transactions.get(tid)
             if not t or t["customer_id"] != self.session["customer_id"]:
                 continue
@@ -145,11 +150,8 @@ class Agent:
         elif name == "get_transaction" and not self.session.get("verified"):
             res = {"error": "verify_customer_first"}
         elif name == "get_transaction":
-            # Normalize transaction ID: extract T\d+ from inputs like "Amazon T105"
-            txn_id = args.get("txn_id", "")
-            match = re.search(r'[Tt]\d+', str(txn_id))
-            if match:
-                args = {**args, "txn_id": match.group(0).upper()}
+            # Normalize transaction ID: "Amazon txn 58306" / "txn58306" -> "TXN-58306"
+            args = {**args, "txn_id": normalize_txn_id(args.get("txn_id", ""))}
             # SECURITY: always scope lookups to the verified customer
             args = {**args, "customer_id": self.session["customer_id"]}
             try:
@@ -170,8 +172,7 @@ class Agent:
             elif self.session.get("fraud_claim"):
                 res = {"ok": False, "reason": "blocked_by_policy:fraud_claim_escalate"}
             else:
-                m = re.search(r'[Tt]\d+', str(args.get("txn_id", "")))
-                args = {**args, "txn_id": m.group(0).upper() if m else args.get("txn_id")}
+                args = {**args, "txn_id": normalize_txn_id(args.get("txn_id", ""))}
                 try: float(args.get("amount", 0))
                 except (TypeError, ValueError): args = {**args, "amount": 0}
                 ok, reason = refund_allowed(self.store, self.session, args.get("txn_id"), float(args.get("amount", 0)))

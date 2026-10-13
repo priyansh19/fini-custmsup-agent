@@ -11,24 +11,24 @@ type Scenario = { id: string; title: string; emoji: string; persona: string | nu
 // Fallback if /api/scenarios is unreachable (same data the API serves).
 const FALLBACK: { personas: Persona[]; scenarios: Scenario[] } = {
   personas: [
-    { id: 'C001', name: 'Aisha Khan', email: 'aisha@example.com', last4: '4242', status: 'active', transactions: [] },
-    { id: 'C002', name: 'Ben Ortiz', email: 'ben@example.com', last4: '1881', status: 'frozen', transactions: [] },
-    { id: 'C003', name: 'Chen Wei', email: 'chen@example.com', last4: '0007', status: 'active', transactions: [] },
+    { id: 'PL-48213', name: 'Amara Okafor', email: 'amara.okafor@maplecrest.test', last4: '6417', status: 'active', transactions: [] },
+    { id: 'PL-51907', name: 'Mateo Alvarez', email: 'mateo.alvarez@maplecrest.test', last4: '3058', status: 'frozen', transactions: [] },
+    { id: 'PL-36642', name: 'Mei-Lin Tan', email: 'meilin.tan@maplecrest.test', last4: '9126', status: 'active', transactions: [] },
   ],
   scenarios: [
-    { id: 'spotify', title: 'Refund a Spotify charge', emoji: '🎧', persona: 'C001', expect: 'Refunded instantly', message: 'Hi, I was charged twice for Spotify (T100). Email aisha@example.com, card ending 4242.' },
-    { id: 'overlimit', title: 'Over-limit refund', emoji: '💸', persona: 'C001', expect: 'Handed to a specialist', message: 'Please refund my $120 Zara order T102. aisha@example.com, card 4242' },
-    { id: 'frozen', title: 'My card is frozen', emoji: '🧊', persona: 'C002', expect: 'Reason explained + specialist', message: 'Why is my card frozen? ben@example.com, card 1881' },
-    { id: 'fraud', title: 'Report fraud', emoji: '🚨', persona: 'C003', expect: 'Escalated, no auto-refund', message: "I didn't make the $50 Lyft charge T301. chen@example.com, card 0007" },
+    { id: 'spotify', title: 'Refund a Spotify charge', emoji: '🎧', persona: 'PL-48213', expect: 'Refunded instantly', message: 'Hi, I was charged twice for Spotify (TXN-58214). Email amara.okafor@maplecrest.test, card ending 6417.' },
+    { id: 'overlimit', title: 'Over-limit refund', emoji: '💸', persona: 'PL-48213', expect: 'Handed to a specialist', message: 'Please refund my $120 Zara order TXN-58241. amara.okafor@maplecrest.test, card 6417' },
+    { id: 'frozen', title: 'My card is frozen', emoji: '🧊', persona: 'PL-51907', expect: 'Reason explained + specialist', message: 'Why is my card frozen? mateo.alvarez@maplecrest.test, card 3058' },
+    { id: 'fraud', title: 'Report fraud', emoji: '🚨', persona: 'PL-36642', expect: 'Escalated, no auto-refund', message: "I didn't make the $50 Lyft charge TXN-73325. meilin.tan@maplecrest.test, card 9126" },
   ],
 };
 
-const AVATAR: Record<string, string> = { C001: '🧕', C002: '🧔', C003: '👨‍💻' };
+const AVATAR: Record<string, string> = { 'PL-48213': '👩🏾', 'PL-51907': '🧑🏽', 'PL-36642': '👩🏻‍💼' };
 
 export default function Support() {
   const chat = useChat();
   const [cat, setCat] = useState(FALLBACK);
-  const [persona, setPersona] = useState<string>('C001');
+  const [persona, setPersona] = useState<string>('PL-48213');
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [copied, setCopied] = useState('');
