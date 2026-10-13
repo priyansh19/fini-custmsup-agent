@@ -76,7 +76,7 @@
     },
     {
       "role": "assistant",
-      "content": "A teammate has it and will reach out by email."
+      "content": "A specialist will follow up by email."
     }
   ],
   "tool_calls": [
