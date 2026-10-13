@@ -97,8 +97,8 @@ export default function Support() {
               <div><div className={s.idName}>{p.name}</div><div className={`${s.status} ${p.status === 'frozen' ? s.frozen : ''}`}>{p.status === 'frozen' ? '🧊 Card frozen' : '● Active'}</div></div>
               <div className={s.chipArt} />
             </div>
-            <div className={s.cred} onClick={() => copy(p.email)}><span>Email</span><code>{p.email}</code><i>{copied === p.email ? '✓' : '⧉'}</i></div>
-            <div className={s.cred} onClick={() => copy(p.last4)}><span>Card</span><code>•••• •••• •••• {p.last4}</code><i>{copied === p.last4 ? '✓' : '⧉'}</i></div>
+            <div className={s.cred} onClick={() => copy(p.email)}><span>Email</span><code>{p.email}</code><i>{copied === p.email ? '✓' : 'copy'}</i></div>
+            <div className={s.cred} onClick={() => copy(p.last4)}><span>Card</span><code>•••• •••• •••• {p.last4}</code><i>{copied === p.last4 ? '✓' : 'copy'}</i></div>
             <button className={s.useBtn} onClick={useMyDetails}>Use these details in chat</button>
           </div>
           {p.transactions.length > 0 && (
