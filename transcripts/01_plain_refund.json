@@ -4,7 +4,7 @@
   "messages": [
     {
       "role": "user",
-      "content": "Hi, I was charged for Spotify twice, txn T100. Email aisha@example.com, card ends 4242."
+      "content": "Hi, I was charged for Spotify twice, txn TXN-58214. Email amara.okafor@maplecrest.test, card ends 6417."
     },
     {
       "role": "assistant",
@@ -14,8 +14,8 @@
           "id": "c1",
           "name": "verify_customer",
           "arguments": {
-            "email": "aisha@example.com",
-            "last4": "4242"
+            "email": "amara.okafor@maplecrest.test",
+            "last4": "6417"
           }
         }
       ]
@@ -24,7 +24,7 @@
       "role": "tool",
       "tool_call_id": "c1",
       "name": "verify_customer",
-      "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
+      "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
     {
       "role": "assistant",
@@ -34,8 +34,8 @@
           "id": "c2",
           "name": "get_transaction",
           "arguments": {
-            "customer_id": "C001",
-            "txn_id": "T100"
+            "customer_id": "PL-48213",
+            "txn_id": "TXN-58214"
           }
         }
       ]
@@ -44,7 +44,7 @@
       "role": "tool",
       "tool_call_id": "c2",
       "name": "get_transaction",
-      "content": "{\"amount\": 42.5, \"date\": \"2026-10-01\", \"merchant\": \"Spotify\", \"status\": \"settled\"}"
+      "content": "{\"amount\": 42.5, \"date\": \"2026-10-01\", \"merchant\": \"Spotify\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 42.5}}"
     },
     {
       "role": "assistant",
@@ -54,7 +54,7 @@
           "id": "c3",
           "name": "issue_refund",
           "arguments": {
-            "txn_id": "T100",
+            "txn_id": "TXN-58214",
             "amount": 42.5
           }
         }
@@ -75,31 +75,36 @@
     [
       "verify_customer",
       {
-        "email": "aisha@example.com",
-        "last4": "4242"
+        "email": "amara.okafor@maplecrest.test",
+        "last4": "6417"
       },
       {
         "verified": true,
-        "customer_id": "C001"
+        "customer_id": "PL-48213"
       }
     ],
     [
       "get_transaction",
       {
-        "customer_id": "C001",
-        "txn_id": "T100"
+        "customer_id": "PL-48213",
+        "txn_id": "TXN-58214"
       },
       {
         "amount": 42.5,
         "date": "2026-10-01",
         "merchant": "Spotify",
-        "status": "settled"
+        "status": "settled",
+        "refund_check": {
+          "eligible_for_full_refund": true,
+          "reason": "ok",
+          "refundable_remaining": 42.5
+        }
       }
     ],
     [
       "issue_refund",
       {
-        "txn_id": "T100",
+        "txn_id": "TXN-58214",
         "amount": 42.5
       },
       {
@@ -111,7 +116,7 @@
   "checks": [
     {
       "pass": true,
-      "check": "refund issued for T100"
+      "check": "refund issued for TXN-58214"
     },
     {
       "pass": true,

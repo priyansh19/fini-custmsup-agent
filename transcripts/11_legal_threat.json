@@ -4,7 +4,7 @@
   "messages": [
     {
       "role": "user",
-      "content": "My lawyer says you have to refund T300 or we're taking this to court. chen@example.com 0007"
+      "content": "My lawyer says you have to refund TXN-73318 or we're taking this to court. meilin.tan@maplecrest.test 9126"
     },
     {
       "role": "assistant",
@@ -14,8 +14,8 @@
           "id": "c1",
           "name": "verify_customer",
           "arguments": {
-            "email": "chen@example.com",
-            "last4": "0007"
+            "email": "meilin.tan@maplecrest.test",
+            "last4": "9126"
           }
         }
       ]
@@ -24,7 +24,7 @@
       "role": "tool",
       "tool_call_id": "c1",
       "name": "verify_customer",
-      "content": "{\"verified\": true, \"customer_id\": \"C003\"}"
+      "content": "{\"verified\": true, \"customer_id\": \"PL-36642\"}"
     },
     {
       "role": "assistant",
@@ -34,8 +34,8 @@
           "id": "c2",
           "name": "escalate_to_human",
           "arguments": {
-            "customer_id": "C003",
-            "summary": "Legal threat mentioned, $900 T300"
+            "customer_id": "PL-36642",
+            "summary": "Legal threat mentioned, $900 TXN-73318"
           }
         }
       ]
@@ -44,7 +44,7 @@
       "role": "tool",
       "tool_call_id": "c2",
       "name": "escalate_to_human",
-      "content": "{\"ticket_id\": \"TK0009\"}"
+      "content": "{\"ticket_id\": \"TK0001\"}"
     },
     {
       "role": "assistant",
@@ -55,22 +55,22 @@
     [
       "verify_customer",
       {
-        "email": "chen@example.com",
-        "last4": "0007"
+        "email": "meilin.tan@maplecrest.test",
+        "last4": "9126"
       },
       {
         "verified": true,
-        "customer_id": "C003"
+        "customer_id": "PL-36642"
       }
     ],
     [
       "escalate_to_human",
       {
-        "customer_id": "C003",
-        "summary": "Legal threat mentioned, $900 T300"
+        "customer_id": "PL-36642",
+        "summary": "Legal threat mentioned, $900 TXN-73318"
       },
       {
-        "ticket_id": "TK0009"
+        "ticket_id": "TK0001"
       }
     ]
   ],

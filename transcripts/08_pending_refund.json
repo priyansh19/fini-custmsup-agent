@@ -4,7 +4,7 @@
   "messages": [
     {
       "role": "user",
-      "content": "Refund my Amazon T105, aisha@example.com 4242"
+      "content": "Refund my Amazon TXN-58306, amara.okafor@maplecrest.test 6417"
     },
     {
       "role": "assistant",
@@ -14,8 +14,8 @@
           "id": "c1",
           "name": "verify_customer",
           "arguments": {
-            "email": "aisha@example.com",
-            "last4": "4242"
+            "email": "amara.okafor@maplecrest.test",
+            "last4": "6417"
           }
         }
       ]
@@ -24,7 +24,7 @@
       "role": "tool",
       "tool_call_id": "c1",
       "name": "verify_customer",
-      "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
+      "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
     {
       "role": "assistant",
@@ -34,8 +34,8 @@
           "id": "c2",
           "name": "get_transaction",
           "arguments": {
-            "customer_id": "C001",
-            "txn_id": "T105"
+            "customer_id": "PL-48213",
+            "txn_id": "TXN-58306"
           }
         }
       ]
@@ -44,7 +44,7 @@
       "role": "tool",
       "tool_call_id": "c2",
       "name": "get_transaction",
-      "content": "{\"amount\": 15.0, \"date\": \"2026-10-10\", \"merchant\": \"Amazon\", \"status\": \"pending\"}"
+      "content": "{\"amount\": 15.0, \"date\": \"2026-10-10\", \"merchant\": \"Amazon\", \"status\": \"pending\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 15.0}}"
     },
     {
       "role": "assistant",
@@ -54,7 +54,7 @@
           "id": "c3",
           "name": "issue_refund",
           "arguments": {
-            "txn_id": "T105",
+            "txn_id": "TXN-58306",
             "amount": 15
           }
         }
@@ -64,7 +64,7 @@
       "role": "tool",
       "tool_call_id": "c3",
       "name": "issue_refund",
-      "content": "{\"ok\": true, \"refund_id\": \"R0006\"}"
+      "content": "{\"ok\": true, \"refund_id\": \"R0001\"}"
     },
     {
       "role": "assistant",
@@ -75,43 +75,48 @@
     [
       "verify_customer",
       {
-        "email": "aisha@example.com",
-        "last4": "4242"
+        "email": "amara.okafor@maplecrest.test",
+        "last4": "6417"
       },
       {
         "verified": true,
-        "customer_id": "C001"
+        "customer_id": "PL-48213"
       }
     ],
     [
       "get_transaction",
       {
-        "customer_id": "C001",
-        "txn_id": "T105"
+        "customer_id": "PL-48213",
+        "txn_id": "TXN-58306"
       },
       {
         "amount": 15.0,
         "date": "2026-10-10",
         "merchant": "Amazon",
-        "status": "pending"
+        "status": "pending",
+        "refund_check": {
+          "eligible_for_full_refund": true,
+          "reason": "ok",
+          "refundable_remaining": 15.0
+        }
       }
     ],
     [
       "issue_refund",
       {
-        "txn_id": "T105",
+        "txn_id": "TXN-58306",
         "amount": 15
       },
       {
         "ok": true,
-        "refund_id": "R0006"
+        "refund_id": "R0001"
       }
     ]
   ],
   "checks": [
     {
       "pass": true,
-      "check": "refund issued for T105"
+      "check": "refund issued for TXN-58306"
     }
   ]
 }

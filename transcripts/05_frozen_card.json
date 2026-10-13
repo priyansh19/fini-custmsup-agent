@@ -4,7 +4,7 @@
   "messages": [
     {
       "role": "user",
-      "content": "Why is my card frozen?? ben@example.com, 1881"
+      "content": "Why is my card frozen?? mateo.alvarez@maplecrest.test, 3058"
     },
     {
       "role": "assistant",
@@ -14,8 +14,8 @@
           "id": "c1",
           "name": "verify_customer",
           "arguments": {
-            "email": "ben@example.com",
-            "last4": "1881"
+            "email": "mateo.alvarez@maplecrest.test",
+            "last4": "3058"
           }
         }
       ]
@@ -24,7 +24,7 @@
       "role": "tool",
       "tool_call_id": "c1",
       "name": "verify_customer",
-      "content": "{\"verified\": true, \"customer_id\": \"C002\"}"
+      "content": "{\"verified\": true, \"customer_id\": \"PL-51907\", \"card_status\": \"frozen\", \"freeze_reason\": \"Unusual login from a new country\", \"escalation\": \"created_automatically\", \"ticket_id\": \"TK0001\", \"tell_customer\": \"A specialist will follow up by email.\"}"
     },
     {
       "role": "assistant",
@@ -34,7 +34,7 @@
           "id": "c2",
           "name": "get_customer",
           "arguments": {
-            "email": "ben@example.com"
+            "email": "mateo.alvarez@maplecrest.test"
           }
         }
       ]
@@ -43,7 +43,7 @@
       "role": "tool",
       "tool_call_id": "c2",
       "name": "get_customer",
-      "content": "{\"id\": \"C002\", \"name\": \"Ben Ortiz\", \"card_last4\": \"1881\", \"status\": \"frozen\", \"verified\": false, \"freeze_reason\": \"Unusual login from a new country\"}"
+      "content": "{\"id\": \"PL-51907\", \"name\": \"Mateo Alvarez\", \"status\": \"frozen\", \"verified\": false, \"freeze_reason\": \"Unusual login from a new country\"}"
     },
     {
       "role": "assistant",
@@ -51,7 +51,7 @@
     },
     {
       "role": "user",
-      "content": "Refund my Steam purchase T200 then!"
+      "content": "Refund my Steam purchase TXN-61450 then!"
     },
     {
       "role": "assistant",
@@ -61,8 +61,8 @@
           "id": "c3",
           "name": "escalate_to_human",
           "arguments": {
-            "customer_id": "C002",
-            "summary": "Frozen card, refund request T200 - needs human review"
+            "customer_id": "PL-51907",
+            "summary": "Frozen card, refund request TXN-61450 - needs human review"
           }
         }
       ]
@@ -71,7 +71,7 @@
       "role": "tool",
       "tool_call_id": "c3",
       "name": "escalate_to_human",
-      "content": "{\"ticket_id\": \"TK0004\"}"
+      "content": "{\"ticket_id\": \"TK0002\"}"
     },
     {
       "role": "assistant",
@@ -80,25 +80,40 @@
   ],
   "tool_calls": [
     [
+      "escalate_to_human",
+      {
+        "customer_id": "PL-51907",
+        "summary": "Frozen card: customer contacted support; needs identity check/unfreeze review.",
+        "auto": true
+      },
+      {
+        "ticket_id": "TK0001"
+      }
+    ],
+    [
       "verify_customer",
       {
-        "email": "ben@example.com",
-        "last4": "1881"
+        "email": "mateo.alvarez@maplecrest.test",
+        "last4": "3058"
       },
       {
         "verified": true,
-        "customer_id": "C002"
+        "customer_id": "PL-51907",
+        "card_status": "frozen",
+        "freeze_reason": "Unusual login from a new country",
+        "escalation": "created_automatically",
+        "ticket_id": "TK0001",
+        "tell_customer": "A specialist will follow up by email."
       }
     ],
     [
       "get_customer",
       {
-        "email": "ben@example.com"
+        "email": "mateo.alvarez@maplecrest.test"
       },
       {
-        "id": "C002",
-        "name": "Ben Ortiz",
-        "card_last4": "1881",
+        "id": "PL-51907",
+        "name": "Mateo Alvarez",
         "status": "frozen",
         "verified": false,
         "freeze_reason": "Unusual login from a new country"
@@ -107,11 +122,11 @@
     [
       "escalate_to_human",
       {
-        "customer_id": "C002",
-        "summary": "Frozen card, refund request T200 - needs human review"
+        "customer_id": "PL-51907",
+        "summary": "Frozen card, refund request TXN-61450 - needs human review"
       },
       {
-        "ticket_id": "TK0004"
+        "ticket_id": "TK0002"
       }
     ]
   ],

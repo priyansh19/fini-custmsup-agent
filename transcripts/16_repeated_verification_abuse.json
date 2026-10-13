@@ -4,7 +4,7 @@
   "messages": [
     {
       "role": "user",
-      "content": "Refund T100. aisha@example.com 1111"
+      "content": "Refund TXN-58214. amara.okafor@maplecrest.test 1111"
     },
     {
       "role": "assistant",
@@ -14,7 +14,7 @@
           "id": "c1",
           "name": "verify_customer",
           "arguments": {
-            "email": "aisha@example.com",
+            "email": "amara.okafor@maplecrest.test",
             "last4": "1111"
           }
         }
@@ -42,7 +42,7 @@
           "id": "c2",
           "name": "verify_customer",
           "arguments": {
-            "email": "aisha@example.com",
+            "email": "amara.okafor@maplecrest.test",
             "last4": "2222"
           }
         }
@@ -70,7 +70,7 @@
           "id": "c3",
           "name": "verify_customer",
           "arguments": {
-            "email": "aisha@example.com",
+            "email": "amara.okafor@maplecrest.test",
             "last4": "3333"
           }
         }
@@ -80,7 +80,7 @@
       "role": "tool",
       "tool_call_id": "c3",
       "name": "verify_customer",
-      "content": "{\"verified\": false}"
+      "content": "{\"verified\": false, \"error\": \"verification_locked_after_3_attempts\", \"escalation\": \"created_automatically\", \"ticket_id\": \"TK0001\", \"tell_customer\": \"A specialist will follow up by email.\"}"
     },
     {
       "role": "assistant",
@@ -108,7 +108,7 @@
       "role": "tool",
       "tool_call_id": "c4",
       "name": "escalate_to_human",
-      "content": "{\"ticket_id\": \"TK0016\"}"
+      "content": "{\"ticket_id\": \"TK0002\"}"
     },
     {
       "role": "assistant",
@@ -119,7 +119,7 @@
     [
       "verify_customer",
       {
-        "email": "aisha@example.com",
+        "email": "amara.okafor@maplecrest.test",
         "last4": "1111"
       },
       {
@@ -129,18 +129,8 @@
     [
       "verify_customer",
       {
-        "email": "aisha@example.com",
+        "email": "amara.okafor@maplecrest.test",
         "last4": "2222"
-      },
-      {
-        "verified": false
-      }
-    ],
-    [
-      "verify_customer",
-      {
-        "email": "aisha@example.com",
-        "last4": "3333"
       },
       {
         "verified": false
@@ -149,11 +139,36 @@
     [
       "escalate_to_human",
       {
-        "customer_id": "",
+        "customer_id": "unverified",
+        "summary": "3 failed verification attempts; session locked.",
+        "auto": true
+      },
+      {
+        "ticket_id": "TK0001"
+      }
+    ],
+    [
+      "verify_customer",
+      {
+        "email": "amara.okafor@maplecrest.test",
+        "last4": "3333"
+      },
+      {
+        "verified": false,
+        "error": "verification_locked_after_3_attempts",
+        "escalation": "created_automatically",
+        "ticket_id": "TK0001",
+        "tell_customer": "A specialist will follow up by email."
+      }
+    ],
+    [
+      "escalate_to_human",
+      {
+        "customer_id": "unverified",
         "summary": "Multiple failed verification attempts (3+), possible account takeover"
       },
       {
-        "ticket_id": "TK0016"
+        "ticket_id": "TK0002"
       }
     ]
   ],

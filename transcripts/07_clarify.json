@@ -19,7 +19,7 @@
     },
     {
       "pass": true,
-      "check": "reply matches /\\?/"
+      "check": "reply matches /(email|last.?4|which|transaction|charge)/"
     }
   ]
 }

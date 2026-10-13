@@ -26,7 +26,10 @@ def sanitize_reply(text: str) -> str:
 
 def normalize_txn_id(raw):
     m = re.search(r'(?i)\btxn[\s_-]*(\d{4,6})\b', str(raw))
-    return f"TXN-{m.group(1)}" if m else str(raw).strip()
+    if m:
+        return f"TXN-{m.group(1)}"
+    bare = re.fullmatch(r'\s*#?(\d{5})\s*', str(raw))  # model sometimes passes just "58306"
+    return f"TXN-{bare.group(1)}" if bare else str(raw).strip()
 
 
 class Agent:

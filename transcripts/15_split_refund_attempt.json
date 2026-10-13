@@ -4,7 +4,7 @@
   "messages": [
     {
       "role": "user",
-      "content": "Refund $60 from my Zara purchase T102. aisha@example.com 4242"
+      "content": "Refund $60 from my Zara purchase TXN-58241. amara.okafor@maplecrest.test 6417"
     },
     {
       "role": "assistant",
@@ -14,8 +14,8 @@
           "id": "c1",
           "name": "verify_customer",
           "arguments": {
-            "email": "aisha@example.com",
-            "last4": "4242"
+            "email": "amara.okafor@maplecrest.test",
+            "last4": "6417"
           }
         }
       ]
@@ -24,7 +24,7 @@
       "role": "tool",
       "tool_call_id": "c1",
       "name": "verify_customer",
-      "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
+      "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
     {
       "role": "assistant",
@@ -34,8 +34,8 @@
           "id": "c2",
           "name": "get_transaction",
           "arguments": {
-            "customer_id": "C001",
-            "txn_id": "T102"
+            "customer_id": "PL-48213",
+            "txn_id": "TXN-58241"
           }
         }
       ]
@@ -44,7 +44,7 @@
       "role": "tool",
       "tool_call_id": "c2",
       "name": "get_transaction",
-      "content": "{\"amount\": 120.0, \"date\": \"2026-10-03\", \"merchant\": \"Zara\", \"status\": \"settled\"}"
+      "content": "{\"amount\": 120.0, \"date\": \"2026-10-03\", \"merchant\": \"Zara\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": false, \"reason\": \"over_auto_limit_escalate\", \"refundable_remaining\": 120.0}}"
     },
     {
       "role": "assistant",
@@ -54,8 +54,8 @@
           "id": "c3",
           "name": "escalate_to_human",
           "arguments": {
-            "customer_id": "C001",
-            "summary": "T102 $120 transaction, over $75 limit, partial refund requested"
+            "customer_id": "PL-48213",
+            "summary": "TXN-58241 $120 transaction, over $75 limit, partial refund requested"
           }
         }
       ]
@@ -64,7 +64,7 @@
       "role": "tool",
       "tool_call_id": "c3",
       "name": "escalate_to_human",
-      "content": "{\"ticket_id\": \"TK0015\"}"
+      "content": "{\"ticket_id\": \"TK0001\"}"
     },
     {
       "role": "assistant",
@@ -72,46 +72,51 @@
     },
     {
       "role": "user",
-      "content": "Now refund another $60 from the same charge T102."
+      "content": "Now refund another $60 from the same charge TXN-58241."
     },
     {
       "role": "assistant",
-      "content": "I've already escalated T102. A specialist will follow up."
+      "content": "I've already escalated TXN-58241. A specialist will follow up."
     }
   ],
   "tool_calls": [
     [
       "verify_customer",
       {
-        "email": "aisha@example.com",
-        "last4": "4242"
+        "email": "amara.okafor@maplecrest.test",
+        "last4": "6417"
       },
       {
         "verified": true,
-        "customer_id": "C001"
+        "customer_id": "PL-48213"
       }
     ],
     [
       "get_transaction",
       {
-        "customer_id": "C001",
-        "txn_id": "T102"
+        "customer_id": "PL-48213",
+        "txn_id": "TXN-58241"
       },
       {
         "amount": 120.0,
         "date": "2026-10-03",
         "merchant": "Zara",
-        "status": "settled"
+        "status": "settled",
+        "refund_check": {
+          "eligible_for_full_refund": false,
+          "reason": "over_auto_limit_escalate",
+          "refundable_remaining": 120.0
+        }
       }
     ],
     [
       "escalate_to_human",
       {
-        "customer_id": "C001",
-        "summary": "T102 $120 transaction, over $75 limit, partial refund requested"
+        "customer_id": "PL-48213",
+        "summary": "TXN-58241 $120 transaction, over $75 limit, partial refund requested"
       },
       {
-        "ticket_id": "TK0015"
+        "ticket_id": "TK0001"
       }
     ]
   ],

@@ -1,10 +1,10 @@
 {
   "scenario": "12_cumulative_limit",
-  "why": "ABUSE DETECTION: cumulative refunds hit $150 cap, additional requests escalate.",
+  "why": "ABUSE DETECTION: cumulative refunds exceed $150 cap, additional requests escalate.",
   "messages": [
     {
       "role": "user",
-      "content": "Hi, refund T100 please. aisha@example.com 4242"
+      "content": "Hi, refund TXN-58214 please. amara.okafor@maplecrest.test 6417"
     },
     {
       "role": "assistant",
@@ -14,8 +14,8 @@
           "id": "c1",
           "name": "verify_customer",
           "arguments": {
-            "email": "aisha@example.com",
-            "last4": "4242"
+            "email": "amara.okafor@maplecrest.test",
+            "last4": "6417"
           }
         }
       ]
@@ -24,7 +24,7 @@
       "role": "tool",
       "tool_call_id": "c1",
       "name": "verify_customer",
-      "content": "{\"verified\": true, \"customer_id\": \"C001\"}"
+      "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
     {
       "role": "assistant",
@@ -34,8 +34,8 @@
           "id": "c2",
           "name": "get_transaction",
           "arguments": {
-            "customer_id": "C001",
-            "txn_id": "T100"
+            "customer_id": "PL-48213",
+            "txn_id": "TXN-58214"
           }
         }
       ]
@@ -44,7 +44,7 @@
       "role": "tool",
       "tool_call_id": "c2",
       "name": "get_transaction",
-      "content": "{\"amount\": 42.5, \"date\": \"2026-10-01\", \"merchant\": \"Spotify\", \"status\": \"settled\"}"
+      "content": "{\"amount\": 42.5, \"date\": \"2026-10-01\", \"merchant\": \"Spotify\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 42.5}}"
     },
     {
       "role": "assistant",
@@ -54,7 +54,7 @@
           "id": "c3",
           "name": "issue_refund",
           "arguments": {
-            "txn_id": "T100",
+            "txn_id": "TXN-58214",
             "amount": 42.5
           }
         }
@@ -64,7 +64,7 @@
       "role": "tool",
       "tool_call_id": "c3",
       "name": "issue_refund",
-      "content": "{\"ok\": true, \"refund_id\": \"R0010\"}"
+      "content": "{\"ok\": true, \"refund_id\": \"R0001\"}"
     },
     {
       "role": "assistant",
@@ -72,7 +72,7 @@
     },
     {
       "role": "user",
-      "content": "Also refund T101 while you're at it."
+      "content": "Also refund TXN-58237 while you're at it."
     },
     {
       "role": "assistant",
@@ -82,8 +82,8 @@
           "id": "c4",
           "name": "get_transaction",
           "arguments": {
-            "customer_id": "C001",
-            "txn_id": "T101"
+            "customer_id": "PL-48213",
+            "txn_id": "TXN-58237"
           }
         }
       ]
@@ -92,7 +92,7 @@
       "role": "tool",
       "tool_call_id": "c4",
       "name": "get_transaction",
-      "content": "{\"amount\": 75.0, \"date\": \"2026-10-05\", \"merchant\": \"Uber\", \"status\": \"settled\"}"
+      "content": "{\"amount\": 75.0, \"date\": \"2026-10-05\", \"merchant\": \"Uber\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 75.0}}"
     },
     {
       "role": "assistant",
@@ -102,7 +102,7 @@
           "id": "c5",
           "name": "issue_refund",
           "arguments": {
-            "txn_id": "T101",
+            "txn_id": "TXN-58237",
             "amount": 75
           }
         }
@@ -112,7 +112,7 @@
       "role": "tool",
       "tool_call_id": "c5",
       "name": "issue_refund",
-      "content": "{\"ok\": true, \"refund_id\": \"R0011\"}"
+      "content": "{\"ok\": true, \"refund_id\": \"R0002\"}"
     },
     {
       "role": "assistant",
@@ -120,7 +120,7 @@
     },
     {
       "role": "user",
-      "content": "And T107 too."
+      "content": "And TXN-58244 too."
     },
     {
       "role": "assistant",
@@ -130,8 +130,8 @@
           "id": "c6",
           "name": "get_transaction",
           "arguments": {
-            "customer_id": "C001",
-            "txn_id": "T107"
+            "customer_id": "PL-48213",
+            "txn_id": "TXN-58244"
           }
         }
       ]
@@ -140,7 +140,7 @@
       "role": "tool",
       "tool_call_id": "c6",
       "name": "get_transaction",
-      "content": "{\"amount\": 10.0, \"date\": \"2026-10-01\", \"merchant\": \"Coffee Shop\", \"status\": \"settled\"}"
+      "content": "{\"amount\": 40.0, \"date\": \"2026-10-03\", \"merchant\": \"DoorDash\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": false, \"reason\": \"cumulative_limit_escalate\", \"refundable_remaining\": 40.0}}"
     },
     {
       "role": "assistant",
@@ -150,8 +150,8 @@
           "id": "c7",
           "name": "escalate_to_human",
           "arguments": {
-            "customer_id": "C001",
-            "summary": "Cumulative refund limit reached ($117.50), T107 needs review"
+            "customer_id": "PL-48213",
+            "summary": "Cumulative refund limit: $117.50 issued, TXN-58244 ($40) would exceed $150 cap"
           }
         }
       ]
@@ -160,94 +160,109 @@
       "role": "tool",
       "tool_call_id": "c7",
       "name": "escalate_to_human",
-      "content": "{\"ticket_id\": \"TK0012\"}"
+      "content": "{\"ticket_id\": \"TK0001\"}"
     },
     {
       "role": "assistant",
-      "content": "You've hit the $150 refund cap for this period. A specialist will review T107."
+      "content": "You've hit the $150 refund cap for this period. A specialist will review TXN-58244."
     }
   ],
   "tool_calls": [
     [
       "verify_customer",
       {
-        "email": "aisha@example.com",
-        "last4": "4242"
+        "email": "amara.okafor@maplecrest.test",
+        "last4": "6417"
       },
       {
         "verified": true,
-        "customer_id": "C001"
+        "customer_id": "PL-48213"
       }
     ],
     [
       "get_transaction",
       {
-        "customer_id": "C001",
-        "txn_id": "T100"
+        "customer_id": "PL-48213",
+        "txn_id": "TXN-58214"
       },
       {
         "amount": 42.5,
         "date": "2026-10-01",
         "merchant": "Spotify",
-        "status": "settled"
+        "status": "settled",
+        "refund_check": {
+          "eligible_for_full_refund": true,
+          "reason": "ok",
+          "refundable_remaining": 42.5
+        }
       }
     ],
     [
       "issue_refund",
       {
-        "txn_id": "T100",
+        "txn_id": "TXN-58214",
         "amount": 42.5
       },
       {
         "ok": true,
-        "refund_id": "R0010"
+        "refund_id": "R0001"
       }
     ],
     [
       "get_transaction",
       {
-        "customer_id": "C001",
-        "txn_id": "T101"
+        "customer_id": "PL-48213",
+        "txn_id": "TXN-58237"
       },
       {
         "amount": 75.0,
         "date": "2026-10-05",
         "merchant": "Uber",
-        "status": "settled"
+        "status": "settled",
+        "refund_check": {
+          "eligible_for_full_refund": true,
+          "reason": "ok",
+          "refundable_remaining": 75.0
+        }
       }
     ],
     [
       "issue_refund",
       {
-        "txn_id": "T101",
+        "txn_id": "TXN-58237",
         "amount": 75
       },
       {
         "ok": true,
-        "refund_id": "R0011"
+        "refund_id": "R0002"
       }
     ],
     [
       "get_transaction",
       {
-        "customer_id": "C001",
-        "txn_id": "T107"
+        "customer_id": "PL-48213",
+        "txn_id": "TXN-58244"
       },
       {
-        "amount": 10.0,
-        "date": "2026-10-01",
-        "merchant": "Coffee Shop",
-        "status": "settled"
+        "amount": 40.0,
+        "date": "2026-10-03",
+        "merchant": "DoorDash",
+        "status": "settled",
+        "refund_check": {
+          "eligible_for_full_refund": false,
+          "reason": "cumulative_limit_escalate",
+          "refundable_remaining": 40.0
+        }
       }
     ],
     [
       "escalate_to_human",
       {
-        "customer_id": "C001",
-        "summary": "Cumulative refund limit reached ($117.50), T107 needs review"
+        "customer_id": "PL-48213",
+        "summary": "Cumulative refund limit: $117.50 issued, TXN-58244 ($40) would exceed $150 cap"
       },
       {
-        "ticket_id": "TK0012"
+        "ticket_id": "TK0001"
       }
     ]
   ],
