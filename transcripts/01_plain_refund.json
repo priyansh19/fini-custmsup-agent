@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_0fGTAqcOjKBRzmzP5RqFTDBN",
+          "id": "call_L6lyeiqIvmdTuhkBnXC228wY",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_0fGTAqcOjKBRzmzP5RqFTDBN",
+      "tool_call_id": "call_L6lyeiqIvmdTuhkBnXC228wY",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_XaoeS7AxxIzkSa0XTLgw2E9V",
+          "id": "call_j7k2lQ84cuklsyQQlZY6f0hu",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-48213",
@@ -42,7 +42,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_XaoeS7AxxIzkSa0XTLgw2E9V",
+      "tool_call_id": "call_j7k2lQ84cuklsyQQlZY6f0hu",
       "name": "get_transaction",
       "content": "{\"amount\": 42.5, \"date\": \"2026-10-01\", \"merchant\": \"Spotify\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 42.5}}"
     },
@@ -51,7 +51,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_CJa3HoeaVMTB474x9xqiYpus",
+          "id": "call_91aQkpW5FYurbtHSmczxxPDa",
           "name": "issue_refund",
           "arguments": {
             "txn_id": "TXN-58214",
@@ -63,13 +63,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_CJa3HoeaVMTB474x9xqiYpus",
+      "tool_call_id": "call_91aQkpW5FYurbtHSmczxxPDa",
       "name": "issue_refund",
       "content": "{\"ok\": true, \"refund_id\": \"R0001\"}"
     },
     {
       "role": "assistant",
-      "content": "Done, $42.50 is on its way back to you. If you have any more questions, feel free to ask!"
+      "content": "Done, $42.50 is on its way back to you."
     }
   ],
   "tool_calls": [

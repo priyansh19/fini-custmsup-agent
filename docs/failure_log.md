@@ -18,6 +18,8 @@ Newest first. The production model is **`openai/gpt-4o-mini` via OpenRouter**. I
 - *Tools:* `get_transaction` now returns resolution context (statement descriptor, recurring, `authorization_hold`, `related_txn`, a resolution note). `issue_refund` takes an optional `reason`. The 4 spec tools are unchanged.
 - *Code gate:* on a charge that has a known fix, `issue_refund` is blocked until the fix has been offered in an earlier turn.
 
+**Live UI replay after deploy (#8):** "I want a refund" -> verify -> agent asked *"What happened with the charge?"*. The customer replied with only "TXN-58214", and the agent refunded straight away. When the reason came next, it contradicted itself (*"I recommend contacting Spotify directly…"*). **Fix (code):** a reason gate. If the customer hasn't said what went wrong (only "refund" + ID + credentials), the first `issue_refund` is held with `ask_reason_first`. A second attempt in a later turn goes through even without a reason, so the gate isn't obstructive.
+
 **New scenarios:** 17–21, plus live cases r01–r06. A real-model run after the fix found two more problems:
 - 01 asked "would you like me to process that?" for a vague "charged twice". The scenario now gives a clear reason.
 - 12 claimed TXN-58244 "can't be found" without calling the tool. Prompt fix: always call get_transaction before saying not found.

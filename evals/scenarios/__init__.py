@@ -40,7 +40,7 @@ SCENARIOS = [
                 say("Sorry, those details don't match, so I can't share anything about this account.")]},
 
     {"id": "04_partial_refund", "why": "Partial refund on valid transaction (≤ $75); should succeed.",
-     "turns": ["I want $15 back from my Apple purchase TXN-58219. amara.okafor@maplecrest.test 6417"],
+     "turns": ["I want $15 back from my Apple purchase TXN-58219, one of the cables was missing from the box. amara.okafor@maplecrest.test 6417"],
      "checks": [C.refund_issued("TXN-58219")],
      "script": [tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
                 tc(2, "get_transaction", customer_id="PL-48213", txn_id="TXN-58219"),
@@ -69,7 +69,7 @@ SCENARIOS = [
      "script": [say("Happy to help. What's your email, the last 4 of your card, and which charge is it?")]},
 
     {"id": "08_pending_refund", "why": "Pending transactions CAN now be refunded per policy decision.",
-     "turns": ["Refund my Amazon TXN-58306, amara.okafor@maplecrest.test 6417"],
+     "turns": ["Refund my Amazon TXN-58306, I cancelled that order an hour after placing it. amara.okafor@maplecrest.test 6417"],
      "checks": [C.refund_issued("TXN-58306")],
      "script": [tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
                 tc(2, "get_transaction", customer_id="PL-48213", txn_id="TXN-58306"),

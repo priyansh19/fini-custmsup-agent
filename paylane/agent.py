@@ -87,6 +87,37 @@ class Agent:
                 return tid
         return None
 
+    _GENERIC = set("""i im i'm me my mine we our you your u it its this that these those a an the and or but so to of on for in at by
+        with from is was were be been am are do did does can could would will should please pls plz just now asap
+        want wanted need needs like get give send make issue process refund refunds refunded refunding money back
+        charge charges charged charging transaction transactions txn payment purchase order hi hello hey thanks thank
+        ok okay yes yeah sure email card last digits ending ends ending four 4 is help also too again another one""".split())
+
+    def _reason_given(self, txn_id):
+        """Has the customer said anything beyond 'refund <id>' + credentials? (merchant names don't count)"""
+        t = self.store.transactions.get(txn_id) or {}
+        merchant = set(re.findall(r"[a-z+']+", str(t.get("merchant", "")).lower()))
+        for m in self.messages:
+            if m.get("role") != "user":
+                continue
+            txt = re.sub(r"\S+@\S+|\btxn[\s_-]*\d+|\$?\d+(\.\d+)?", " ", str(m.get("content", "")).lower())
+            words = [w.strip("'") for w in re.findall(r"[a-z']+", txt)]
+            if [w for w in words if len(w) > 1 and w not in self._GENERIC and w not in merchant]:
+                return True
+        return False
+
+    def _reason_gate(self, txn_id, args):
+        """Resolution-first (code): if the customer hasn't said what went wrong, ask once before refunding.
+        Not obstructive: the second attempt in a later turn goes through even without a reason."""
+        if self._reason_given(txn_id) or str(args.get("reason", "")).strip().lower() in ("customer declined to say",):
+            return None
+        asked = self.session.setdefault("reason_asked", {})
+        if txn_id in asked and asked[txn_id] < self.session.get("turn", 0):
+            return None
+        asked.setdefault(txn_id, self.session.get("turn", 0))
+        return {"ok": False, "reason": "ask_reason_first",
+                "instruction": "Ask the customer briefly what went wrong with this charge (so you can fix it if possible). Don't refund in this reply."}
+
     def _resolution_gate(self, txn_id):
         """Resolution-first (code): for charges with a known non-refund fix (descriptor, auth hold,
         subscription, duplicate-looking pending), the fix must be offered in an earlier turn first."""
@@ -212,7 +243,7 @@ class Agent:
                 try: float(args.get("amount", 0))
                 except (TypeError, ValueError): args = {**args, "amount": 0}
                 ok, reason = refund_allowed(self.store, self.session, args.get("txn_id"), float(args.get("amount", 0)))
-                gate = self._resolution_gate(args.get("txn_id"))
+                gate = self._resolution_gate(args.get("txn_id")) or self._reason_gate(args.get("txn_id"), args)
                 if ok and gate:
                     res = gate
                 else:

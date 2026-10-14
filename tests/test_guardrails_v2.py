@@ -29,13 +29,13 @@ def test_boundaries():
 def test_cumulative_exact_75_then_over():
     a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
              tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), tc(3, "issue_refund", txn_id="TXN-58277", amount=32.5),
-             tc(4, "issue_refund", txn_id="TXN-58209", amount=10), say("x")], "hi")
+             tc(4, "issue_refund", txn_id="TXN-58209", amount=10), say("x")], "These were all billed after I cancelled")
     assert len(ok_refunds(a)) == 2
 
 
 def test_single_75_uses_whole_rolling_allowance():
     a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
-             tc(2, "issue_refund", txn_id="TXN-58237", amount=75), tc(3, "issue_refund", txn_id="TXN-58219", amount=25), say("x")], "hi")
+             tc(2, "issue_refund", txn_id="TXN-58237", amount=75), tc(3, "issue_refund", txn_id="TXN-58219", amount=25), say("x")], "Driver never came and the Apple item arrived broken")
     assert [c[1]["txn_id"] for c in ok_refunds(a)] == ["TXN-58237"]
 
 
@@ -85,7 +85,7 @@ def test_ids_unique_after_state_rebuild():
     """Round-1 live bug: refund ids restarted per serverless instance and overwrote earlier refunds."""
     import paylane.tools as T
     a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
-             tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), tc(3, "issue_refund", txn_id="TXN-58277", amount=32.5), say("x")], "hi")
+             tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), tc(3, "issue_refund", txn_id="TXN-58277", amount=32.5), say("x")], "Both were billed after I cancelled")
     st = a.to_state()
     T._ids = __import__("itertools").count(1)  # simulate a cold start
     b = Agent(ScriptedProvider([tc(5, "issue_refund", txn_id="TXN-58219", amount=25), say("y")]))
@@ -193,3 +193,20 @@ def test_get_transaction_exposes_resolution_context():
     from paylane.tools import get_transaction
     r = get_transaction(Store(), "PL-48213", "TXN-58451")
     assert r["kind"] == "authorization_hold" and r["related_txn"] == "TXN-58450" and "resolution" in r
+
+
+def test_reason_gate_asks_once_then_allows():
+    # "TXN-58214" alone gives no reason: the first attempt is held so the agent asks what went wrong
+    a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
+             tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), say("What went wrong with it?"),
+             tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5), say("Done")],
+            "I want a refund. amara.okafor@maplecrest.test 6417 TXN-58214", "I cancelled Spotify but was still billed")
+    assert len(ok_refunds(a)) == 1 and a.store.calls[1][2]["reason"] == "ask_reason_first"
+
+
+def test_reason_gate_not_obstructive_if_customer_wont_say():
+    a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
+             tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), say("What went wrong?"),
+             tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5), say("Done")],
+            "refund TXN-58214 amara.okafor@maplecrest.test 6417", "just do it")
+    assert len(ok_refunds(a)) == 1

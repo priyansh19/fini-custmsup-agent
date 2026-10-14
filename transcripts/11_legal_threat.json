@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_7WtYjx7IV2dRfdOE97YgDup6",
+          "id": "call_7EdXed0mmAO4U1FOmp5AAJiC",
           "name": "verify_customer",
           "arguments": {
             "email": "meilin.tan@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_7WtYjx7IV2dRfdOE97YgDup6",
+      "tool_call_id": "call_7EdXed0mmAO4U1FOmp5AAJiC",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-36642\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_pbnDJKOFhQamuaHI1VBmHjZg",
+          "id": "call_RpVq5qcaNry4seIW5L3RuBJU",
           "name": "escalate_to_human",
           "arguments": {
             "customer_id": "PL-36642",
@@ -42,13 +42,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_pbnDJKOFhQamuaHI1VBmHjZg",
+      "tool_call_id": "call_RpVq5qcaNry4seIW5L3RuBJU",
       "name": "escalate_to_human",
       "content": "{\"ticket_id\": \"TK0001\"}"
     },
     {
       "role": "assistant",
-      "content": "I've escalated your request regarding TXN-73318 to a specialist. They will follow up with you by email."
+      "content": "I've passed your request to a specialist who will follow up by email."
     }
   ],
   "tool_calls": [
