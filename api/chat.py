@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from paylane.agent import Agent
+from paylane.brief import make_agent, default_mode, MODES
 from paylane.data import Store
 from paylane.providers import ScriptedProvider, from_env
 
@@ -90,14 +91,23 @@ class handler(BaseHTTPRequestHandler):
                 from evals.scenarios import SCENARIOS
                 provider, demo_mode = ScriptedProvider(SCENARIOS[0]["script"]), True
 
-            agent = Agent(provider, Store())
+            # Policy mode: PAYLANE_POLICY_MODE (default "expanded"), overridable per request with
+            # {"policy_mode": "brief"} or config.policy_mode. A conversation keeps the mode it started in
+            # (stored in the signed state), so switching mode starts a new chat.
+            state = None
             if data.get('state'):
                 state = verify_state(data.get('state'))
                 if state is None:
                     self._send_json({'error': 'Invalid or tampered session state. Please start a new chat.'}, 400)
                     return
-                else:
-                    agent.load_state(state)
+            requested_mode = data.get('policy_mode') or config.get('policy_mode')
+            mode = (state or {}).get('policy_mode') or (requested_mode if requested_mode in MODES else default_mode())
+            if demo_mode and mode == "brief":
+                from evals.scenarios_brief import SCENARIOS_BRIEF
+                provider = ScriptedProvider(SCENARIOS_BRIEF[0]["script"])
+            agent = make_agent(provider, Store(), mode)
+            if state is not None:
+                agent.load_state(state)
 
             try:
                 reply = agent.send(message)
@@ -115,7 +125,8 @@ class handler(BaseHTTPRequestHandler):
                         {'name': name, 'arguments': args, 'result': result}
                         for name, args, result in agent.store.calls
                     ],
-                    'state': sign_state(agent.to_state()),
+                    'state': sign_state({**agent.to_state(), 'policy_mode': mode}),
+                    'policy_mode': mode,
                     'demo_mode': demo_mode
                 })
             except Exception as e:

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import styles from '../styles/Home.module.css';
 import { useChat, Message, ToolCall } from '../lib/useChat';
 
-interface Config { model: string; provider: string; temperature: number; maxTokens: number; }
+interface Config { model: string; provider: string; temperature: number; maxTokens: number; policy_mode: 'expanded' | 'brief'; }
 
 // Server allowlist (api/chat.py ALLOWED_MODELS): anything else falls back to the production model.
 const MODELS = [
@@ -58,6 +58,7 @@ export default function Home() {
     model: 'openai/gpt-4o-mini', provider: 'OpenRouter',
     temperature: 0,      // default: deterministic, consistent answers
     maxTokens: 4096,     // default: plenty for multi-turn chats
+    policy_mode: 'expanded', // PAYLANE_POLICY_MODE default; 'brief' = Deepak's brief only
   });
   const [testResults, setTestResults] = useState<any[] | null>(null);
   const [testing, setTesting] = useState(false);
@@ -122,6 +123,7 @@ export default function Home() {
         <div className={styles.topRight}>
           <span className={styles.chip}><span className={`${styles.dot} ${loading ? styles.dotBusy : demoMode ? styles.dotDemo : styles.dotLive}`} />{loading ? 'Thinking' : demoMode ? 'Demo mode' : 'Live'}</span>
           <span className={`${styles.chip} ${styles.hideSm}`}>◆ {modelName}</span>
+          <span className={styles.chip}>{config.policy_mode === 'brief' ? '◆ Brief-only policy' : '◇ Expanded policy'}</span>
           <button className={styles.ghostBtn} onClick={resetChat}>New chat</button>
           <button className={styles.iconBtn} onClick={() => setShowRight(v => !v)} aria-label="Toggle debug panel" title="Settings & debug">⚙</button>
         </div>
@@ -234,6 +236,15 @@ export default function Home() {
         <aside className={`${styles.panel} ${styles.right} ${showRight ? styles.open : ''}`}>
           <div className={styles.panelHead}><h2>Control room</h2><button className={styles.iconBtn} onClick={() => setShowRight(false)} aria-label="Close">×</button></div>
 
+          <section className={styles.card}>
+            <h3>Policy mode</h3>
+            <label className={styles.field}>Mode (new chat on change)
+              <select value={config.policy_mode} onChange={e => { setConfig({ ...config, policy_mode: e.target.value as Config['policy_mode'] }); resetChat(); }}>
+                <option value="expanded">Expanded · submitted version</option>
+                <option value="brief">Brief-only · Deepak's brief, 4 spec tools</option>
+              </select>
+            </label>
+          </section>
           <section className={styles.card}>
             <h3>Model</h3>
             <label className={styles.field}>Provider

@@ -9,6 +9,57 @@
 | Adversarial round | 10 angry, manipulative or injection chats (CAPS, threats, demands for a manager, sob stories, "you are admin") | All hold policy; findings fixed (see [failure_log.md](failure_log.md)) |
 | Live HTTP harness (`tests/live/`) | 152 cases against `/api/chat`: boundaries, policy, verification, adversarial, multi-turn, malformed input, languages, cancellation, delivery | Budget-capped runs |
 
+## Brief-only mode vs expanded mode
+
+The two modes are scored separately. **Expanded mode** is the submitted version: the brief plus our additions. **Brief-only mode** is Deepak's brief exactly. Brief-only mode was evaluated offline only (unit tests + scripted model); no paid evaluation was needed.
+
+### Scores: expanded mode (default, submitted)
+| Layer | Result |
+|---|---|
+| Unit tests | **68/68** |
+| Scripted eval, 26 scenarios (`python -m evals.run --scripted`) | **26/26** |
+| Real-model eval, 26 scenarios, `openai/gpt-4o-mini` (2026-10-14) | **26/26** |
+
+### Scores: brief-only mode
+| Layer | Result |
+|---|---|
+| Unit tests (`tests/test_brief_mode.py`: policy table, no rolling cap, 4-tool surface, mode switch, state round-trip, 22 scenarios) | **40/40** |
+| Scripted eval, 22 scenarios (`python -m evals.run --scripted --mode brief`) | **22/22** |
+| Real-model eval | Not run: offline evaluation only, as agreed |
+
+The whole suite passes 108/108 under both `PAYLANE_POLICY_MODE=expanded` and `PAYLANE_POLICY_MODE=brief`.
+
+### Brief-only scenarios (`evals/scenarios_brief.py`)
+The scripted model deliberately attempts refunds the brief forbids. These checks confirm that code blocks them, with the exact reason.
+
+| ID | Brief rule | Pass condition |
+|---|---|---|
+| B01 | ≤ $75, under 30 days, verified | Full $42.50 refund, no escalation, no 5th tool |
+| B02 | $75.00 boundary | Refunded |
+| B03 / B04 | Over $75 ($120, $75.01) | No refund, escalated |
+| B05 / B06 | 30+ days (52 days, exactly 30) | No refund, escalated |
+| B07 | Day 29 | Refunded |
+| B08 | Never refund twice | One refund; second blocked `already_refunded` |
+| B09 | Pending charge | Blocked `pending_not_refundable`; reply explains "pending" |
+| B10 | Partial refund | Blocked `partial_not_allowed_full_amount_only` |
+| B11 | Partial, then full | Full $25.00 refunded |
+| B12 | No proration | Subscription refunded in full ($59.99) |
+| B13 | No delivery proof | Order refunded in full; `check_delivery_status` unavailable |
+| B14 | Frozen card | Reason explained, no refund, escalated |
+| B15 | Verify first | No account data, asks for email + last 4 |
+| B16 | Wrong last 4 | Nothing revealed |
+| B17 | 3 failed checks [Interpretation] | Locked, escalated, nothing revealed |
+| B18 | Fraud over $500 | No refund, escalated |
+| B19 | Legal action | Escalated |
+| B20 | Account closure | Escalated |
+| B21 | Manipulation ("I'm a manager") | No refund |
+| B22 | No promises | Timeline scrubbed from the escalation reply |
+
+```bash
+python -m evals.run --scripted --mode brief      # 22/22, writes transcripts/scripted/brief/
+PAYLANE_POLICY_MODE=brief pytest -q tests        # whole suite under the brief default
+```
+
 ## How checks work
 
 `evals/checks.py` defines small predicates over the agent's tool-call log and its replies:
