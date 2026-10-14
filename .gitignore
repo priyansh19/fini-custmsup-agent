@@ -12,3 +12,4 @@ web/out/
 
 # Vercel
 .vercel/
+transcripts/scripted/

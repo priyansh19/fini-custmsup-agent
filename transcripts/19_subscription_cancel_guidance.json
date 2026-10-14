@@ -1,0 +1,111 @@
+{
+  "scenario": "19_subscription_cancel_guidance",
+  "why": "RESOLUTION-FIRST: forgot to cancel Disney+; help cancel future charges; no refund when they accept.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "amara.okafor@maplecrest.test 6417. I forgot to cancel Disney+ and got billed TXN-58447. Can you help?"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_RowU7hkN4JULVIatweEA3Rtg",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "amara.okafor@maplecrest.test",
+            "last4": "6417"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_RowU7hkN4JULVIatweEA3Rtg",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_4Ezh7aYHqBaNI6M4L3aA5Dk6",
+          "name": "get_transaction",
+          "arguments": {
+            "customer_id": "PL-48213",
+            "txn_id": "TXN-58447"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_4Ezh7aYHqBaNI6M4L3aA5Dk6",
+      "name": "get_transaction",
+      "content": "{\"amount\": 13.99, \"date\": \"2026-10-07\", \"merchant\": \"Disney+\", \"status\": \"settled\", \"descriptor\": \"DISNEYPLUS 888-905-7888\", \"recurring\": true, \"resolution\": \"Monthly subscription auto-renewal. To stop future charges the customer cancels in Disney+ > Account > Subscription > Cancel subscription. Offer that first; refund this renewal only if they still want it.\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 13.99}, \"resolution_first\": \"Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows.\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "The charge of $13.99 is for your Disney+ subscription, which auto-renewed on October 7, 2026. To stop future charges, you'll need to cancel your subscription directly in your Disney+ account under Account > Subscription > Cancel subscription. Does that help resolve your issue, or would you still like to proceed with a refund?"
+    },
+    {
+      "role": "user",
+      "content": "Thanks, I'll cancel it there. Keep this month, I'll use it."
+    },
+    {
+      "role": "assistant",
+      "content": "Got it! Enjoy your Disney+ subscription this month. If you need any further assistance, just let me know!"
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "amara.okafor@maplecrest.test",
+        "last4": "6417"
+      },
+      {
+        "verified": true,
+        "customer_id": "PL-48213"
+      }
+    ],
+    [
+      "get_transaction",
+      {
+        "customer_id": "PL-48213",
+        "txn_id": "TXN-58447"
+      },
+      {
+        "amount": 13.99,
+        "date": "2026-10-07",
+        "merchant": "Disney+",
+        "status": "settled",
+        "descriptor": "DISNEYPLUS 888-905-7888",
+        "recurring": true,
+        "resolution": "Monthly subscription auto-renewal. To stop future charges the customer cancels in Disney+ > Account > Subscription > Cancel subscription. Offer that first; refund this renewal only if they still want it.",
+        "refund_check": {
+          "eligible_for_full_refund": true,
+          "reason": "ok",
+          "refundable_remaining": 13.99
+        },
+        "resolution_first": "Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows."
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "check": "no successful refund"
+    },
+    {
+      "pass": true,
+      "check": "not escalated"
+    },
+    {
+      "pass": true,
+      "check": "reply matches /(?i)cancel/"
+    }
+  ]
+}

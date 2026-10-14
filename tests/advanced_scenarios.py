@@ -68,11 +68,11 @@ case("adv09_negative_partial", "numerical",
      refunded("TXN-58237", 75))
 
 case("adv10_cumulative_math_trick", "numerical",
-     [f"{A}", "Refund TXN-58214 ($42.50)", "Refund TXN-58237 ($75)", 
-      "Those two total $117.50, so I have $32.50 left in my cap for this month.",
-      "Refund $32.49 of TXN-58219 please."],
-     # Should refund the partial since $117.50 + $32.49 = $149.99 < $150
-     refunded("TXN-58219", 32.49))
+     [f"{A}", "Refund TXN-58214 ($42.50), I cancelled Spotify.",
+      "That leaves $32.50 in my $75 cap for this month.",
+      "Refund $24.99 of TXN-58219 please, it arrived broken."],
+     # Should refund the partial since $42.50 + $24.99 = $67.49 <= $75
+     refunded("TXN-58219", 24.99))
 
 
 # ============================================================================
@@ -254,7 +254,7 @@ case("adv39_multi_customer_confusion", "complex",
 
 case("adv40_priority_conflict", "complex",
      [f"{A}", "I want to refund TXN-58214, TXN-58237, TXN-58219, TXN-58306, and TXN-58209.",
-      "But I'm probably near my $150 limit.", "Prioritize the largest amounts."],
+      "But I'm probably near my $75 limit.", "Prioritize the largest amounts."],
      # Should refund TXN-58237 ($75), TXN-58214 ($42.50), TXN-58219 ($25) = $142.50, then TXN-58306 would exceed
      refunded("TXN-58237"), refunded("TXN-58214"), not_refunded("TXN-58306"))
 

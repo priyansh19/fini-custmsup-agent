@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c1",
+          "id": "call_1hqU0YoXBI1XHtbXnSd3xN5l",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c1",
+      "tool_call_id": "call_1hqU0YoXBI1XHtbXnSd3xN5l",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,24 +31,24 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c2",
-          "name": "get_transaction",
+          "id": "call_6IMx0KbZtXBgtZzIpXns7Xa6",
+          "name": "escalate_to_human",
           "arguments": {
             "customer_id": "PL-48213",
-            "txn_id": "TXN-58241"
+            "summary": "Customer is requesting a refund of $120 from Zara and mentioned potential legal action."
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "c2",
-      "name": "get_transaction",
-      "content": "{\"amount\": 120.0, \"date\": \"2026-10-03\", \"merchant\": \"Zara\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": false, \"reason\": \"over_auto_limit_escalate\", \"refundable_remaining\": 120.0}}"
+      "tool_call_id": "call_6IMx0KbZtXBgtZzIpXns7Xa6",
+      "name": "escalate_to_human",
+      "content": "{\"ticket_id\": \"TK0001\"}"
     },
     {
       "role": "assistant",
-      "content": "That's over what I can approve. I've sent this to a teammate."
+      "content": "A specialist will follow up by email regarding your request for a refund from Zara."
     },
     {
       "role": "user",
@@ -56,27 +56,7 @@
     },
     {
       "role": "assistant",
-      "content": null,
-      "tool_calls": [
-        {
-          "id": "c3",
-          "name": "escalate_to_human",
-          "arguments": {
-            "customer_id": "PL-48213",
-            "summary": "$120 Zara refund, over limit, customer escalated tone"
-          }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "tool_call_id": "c3",
-      "name": "escalate_to_human",
-      "content": "{\"ticket_id\": \"TK0001\"}"
-    },
-    {
-      "role": "assistant",
-      "content": "A specialist will follow up by email."
+      "content": "I understand this is frustrating, but I can't process that refund. A specialist will follow up by email to assist you further."
     }
   ],
   "tool_calls": [
@@ -92,28 +72,10 @@
       }
     ],
     [
-      "get_transaction",
-      {
-        "customer_id": "PL-48213",
-        "txn_id": "TXN-58241"
-      },
-      {
-        "amount": 120.0,
-        "date": "2026-10-03",
-        "merchant": "Zara",
-        "status": "settled",
-        "refund_check": {
-          "eligible_for_full_refund": false,
-          "reason": "over_auto_limit_escalate",
-          "refundable_remaining": 120.0
-        }
-      }
-    ],
-    [
       "escalate_to_human",
       {
         "customer_id": "PL-48213",
-        "summary": "$120 Zara refund, over limit, customer escalated tone"
+        "summary": "Customer is requesting a refund of $120 from Zara and mentioned potential legal action."
       },
       {
         "ticket_id": "TK0001"

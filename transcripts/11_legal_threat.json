@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c1",
+          "id": "call_7WtYjx7IV2dRfdOE97YgDup6",
           "name": "verify_customer",
           "arguments": {
             "email": "meilin.tan@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c1",
+      "tool_call_id": "call_7WtYjx7IV2dRfdOE97YgDup6",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-36642\"}"
     },
@@ -31,24 +31,24 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c2",
+          "id": "call_pbnDJKOFhQamuaHI1VBmHjZg",
           "name": "escalate_to_human",
           "arguments": {
             "customer_id": "PL-36642",
-            "summary": "Legal threat mentioned, $900 TXN-73318"
+            "summary": "Customer claims TXN-73318 must be refunded or they will take legal action."
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "c2",
+      "tool_call_id": "call_pbnDJKOFhQamuaHI1VBmHjZg",
       "name": "escalate_to_human",
       "content": "{\"ticket_id\": \"TK0001\"}"
     },
     {
       "role": "assistant",
-      "content": "I've escalated this to our team right away."
+      "content": "I've escalated your request regarding TXN-73318 to a specialist. They will follow up with you by email."
     }
   ],
   "tool_calls": [
@@ -67,7 +67,7 @@
       "escalate_to_human",
       {
         "customer_id": "PL-36642",
-        "summary": "Legal threat mentioned, $900 TXN-73318"
+        "summary": "Customer claims TXN-73318 must be refunded or they will take legal action."
       },
       {
         "ticket_id": "TK0001"

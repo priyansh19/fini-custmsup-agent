@@ -20,7 +20,8 @@ def run_scenario(sc, provider):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--scripted", action="store_true"); ap.add_argument("--only")
     a = ap.parse_args()
-    OUT.mkdir(exist_ok=True)
+    out = OUT / "scripted" if a.scripted else OUT   # committed transcripts/ = real-model runs only
+    out.mkdir(parents=True, exist_ok=True)
     passed = 0
     scs = [s for s in SCENARIOS if not a.only or s["id"] == a.only]
     for sc in scs:
@@ -30,7 +31,7 @@ def main():
         print(f"[{'PASS' if ok else 'FAIL'}] {sc['id']}")
         for good, msg in results:
             if not good: print(f"    x {msg}")
-        (OUT / f"{sc['id']}.json").write_text(json.dumps({"scenario": sc["id"], "why": sc["why"], "messages": agent.messages,
+        (out / f"{sc['id']}.json").write_text(json.dumps({"scenario": sc["id"], "why": sc["why"], "messages": agent.messages,
             "tool_calls": agent.store.calls, "checks": [{"pass": g, "check": m} for g, m in results]}, indent=2, default=str))
     print(f"\nScore: {passed}/{len(scs)}")
 

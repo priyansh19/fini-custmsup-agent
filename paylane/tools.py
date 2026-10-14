@@ -33,10 +33,14 @@ def get_transaction(store: Store, customer_id: str, txn_id: str) -> dict:
     t = store.transactions.get(txn_id)
     if not t or t["customer_id"] != customer_id:
         return {"error": "not_found"}
-    return {k: t[k] for k in ("amount", "date", "merchant", "status")}
+    out = {k: t[k] for k in ("amount", "date", "merchant", "status")}
+    # Resolution context (statement descriptor, holds, subscriptions, linked txns) so the
+    # agent can solve the issue in chat before reaching for a refund.
+    out.update({k: t[k] for k in ("descriptor", "recurring", "kind", "related_txn", "resolution") if k in t})
+    return out
 
 
-def issue_refund(store: Store, txn_id: str, amount: float) -> dict:
+def issue_refund(store: Store, txn_id: str, amount: float, reason: str = "") -> dict:
     """Issue a full or partial refund. Tracks cumulative refunds per transaction."""
     t = store.transactions.get(txn_id)
     if not t:
@@ -56,7 +60,7 @@ def issue_refund(store: Store, txn_id: str, amount: float) -> dict:
         return {"ok": False, "reason": "invalid_amount"}
     
     rid = _new_id("R", store.refunds)
-    store.refunds[rid] = {"txn_id": txn_id, "amount": amount, "date": str(t["date"])}
+    store.refunds[rid] = {"txn_id": txn_id, "amount": amount, "date": str(t["date"]), "reason": (reason or "")[:200]}
     
     # Mark as refunded only if fully refunded
     if already_refunded + amount >= t["amount"]:
@@ -77,11 +81,12 @@ TOOLS = {f.__name__: f for f in (get_customer, get_transaction, issue_refund, es
 TOOL_SPECS = [
     {"name": "get_customer", "description": "Look up a customer by email. Returns card_last4 for verification; never reveal it.",
      "parameters": {"type": "object", "properties": {"email": {"type": "string"}}, "required": ["email"]}},
-    {"name": "get_transaction", "description": "Fetch one transaction for a customer.",
+    {"name": "get_transaction", "description": "Fetch one transaction for a customer. May include descriptor, recurring, kind (e.g. authorization_hold), related_txn and a resolution note: use these to solve the customer's issue before considering a refund.",
      "parameters": {"type": "object", "properties": {"customer_id": {"type": "string"}, "txn_id": {"type": "string"}},
                     "required": ["customer_id", "txn_id"]}},
-    {"name": "issue_refund", "description": "Refund a transaction. Only when policy allows.",
-     "parameters": {"type": "object", "properties": {"txn_id": {"type": "string"}, "amount": {"type": "number"}},
+    {"name": "issue_refund", "description": "Refund a transaction. Only when policy allows AND the customer's issue can't be solved otherwise (or they still want a refund after you offered the fix).",
+     "parameters": {"type": "object", "properties": {"txn_id": {"type": "string"}, "amount": {"type": "number"},
+                                                    "reason": {"type": "string", "description": "Customer's reason for the refund, in a few words."}},
                     "required": ["txn_id", "amount"]}},
     {"name": "escalate_to_human", "description": "Hand off to a human agent with a short summary.",
      "parameters": {"type": "object", "properties": {"customer_id": {"type": "string"}, "summary": {"type": "string"}},

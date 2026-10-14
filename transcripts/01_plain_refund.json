@@ -1,17 +1,17 @@
 {
   "scenario": "01_plain_refund",
-  "why": "Happy path: verified, $42.50, 10 days old.",
+  "why": "Happy path: clear reason (cancelled but still billed), verified, $42.50, 10 days old: refund straight away.",
   "messages": [
     {
       "role": "user",
-      "content": "Hi, I was charged for Spotify twice, txn TXN-58214. Email amara.okafor@maplecrest.test, card ends 6417."
+      "content": "Hi, I cancelled Spotify last month but was still charged, txn TXN-58214. Please refund it. Email amara.okafor@maplecrest.test, card ends 6417."
     },
     {
       "role": "assistant",
       "content": null,
       "tool_calls": [
         {
-          "id": "c1",
+          "id": "call_0fGTAqcOjKBRzmzP5RqFTDBN",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c1",
+      "tool_call_id": "call_0fGTAqcOjKBRzmzP5RqFTDBN",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c2",
+          "id": "call_XaoeS7AxxIzkSa0XTLgw2E9V",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-48213",
@@ -42,7 +42,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c2",
+      "tool_call_id": "call_XaoeS7AxxIzkSa0XTLgw2E9V",
       "name": "get_transaction",
       "content": "{\"amount\": 42.5, \"date\": \"2026-10-01\", \"merchant\": \"Spotify\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 42.5}}"
     },
@@ -51,24 +51,25 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c3",
+          "id": "call_CJa3HoeaVMTB474x9xqiYpus",
           "name": "issue_refund",
           "arguments": {
             "txn_id": "TXN-58214",
-            "amount": 42.5
+            "amount": 42.5,
+            "reason": "Cancelled subscription but still charged."
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "c3",
+      "tool_call_id": "call_CJa3HoeaVMTB474x9xqiYpus",
       "name": "issue_refund",
       "content": "{\"ok\": true, \"refund_id\": \"R0001\"}"
     },
     {
       "role": "assistant",
-      "content": "Done, $42.50 for Spotify is on its way back to you."
+      "content": "Done, $42.50 is on its way back to you. If you have any more questions, feel free to ask!"
     }
   ],
   "tool_calls": [
@@ -105,7 +106,8 @@
       "issue_refund",
       {
         "txn_id": "TXN-58214",
-        "amount": 42.5
+        "amount": 42.5,
+        "reason": "Cancelled subscription but still charged."
       },
       {
         "ok": true,

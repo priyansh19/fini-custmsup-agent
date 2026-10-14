@@ -1,9 +1,7 @@
 # Fini take-home: Paylane support agent
 
 **Live Demo:** [https://fini-custmsup-agent.vercel.app](https://fini-custmsup-agent.vercel.app)  
-Running `openai/gpt-4o-mini` via OpenRouter — **137/138 real-life customer scenarios passing (99.3%)**
-
-Due: **EOD Wed Oct 14, 2026** — reply to Deepak (deepak@usefini.com) with repo link / zip. Budget 4–6 h.
+Running `openai/gpt-4o-mini` via OpenRouter. Scripted eval on the real model: **21/21** (Oct 14; transcripts in `transcripts/`, score in `eval_results/real_gpt-4o-mini_2026-10-14.txt`). Live HTTP harness: 137/138 (Oct 12).
 
 ## Brief (summary)
 Build, in code, an LLM support agent for **Paylane** (fintech: cards, transfers, refunds):
@@ -13,17 +11,17 @@ Build, in code, an LLM support agent for **Paylane** (fintech: cards, transfers,
 4. **Eval** – own pass/fail checks per conversation, report score, show one failure + fix.
 5. **Customer note** – plain-language email to Paylane head of support: does / won't do / needs before launch.
 
-Policy: refund auto-approve if txn ≤ $75, < 30 days old, customer verified, card not frozen, under $150 cumulative cap; else escalate. Verify via card last-4 **and** email before any account detail; never reveal full card/email. Frozen cards: no refunds, escalate. Legal action, ANY fraud claim, account closure → human. Partial refunds OK on ≤$75 txns. Pending txns refundable. Tone: short, warm, no filler.
+Policy: refund auto-approve if txn ≤ $75, < 30 days old, customer verified, card not frozen, under the $75-per-customer rolling 30-day cap; else escalate. Verify via card last-4 **and** email before any account detail; never reveal full card/email. Frozen cards: no refunds, escalate. Legal action, ANY fraud claim, account closure → human. Partial refunds OK on ≤$75 txns. Pending txns refundable. Tone: short, warm, no filler.
 
 Judged on: holding rules under pushback, catching own failures, clarity of customer note, **asking good questions** (ambiguity is deliberate).
 
 ## Layout
 ```
 paylane/  data.py (seeded fake data, TODAY=2026-10-11)  tools.py (4 mock tools + JSON schemas)
-          policy.py (deterministic refund guardrail)    prompt.py (SYSTEM_PROMPT — TODO)
+          policy.py (deterministic refund guardrail)    prompt.py (system prompt / rulebook)
           providers.py (OpenAI / Anthropic / Scripted)  agent.py (tool-calling loop)
-evals/    checks.py  scenarios/ (8 starter scenarios; need 12)  run.py
-tests/    test_policy.py  test_scenarios.py
+evals/    checks.py  scenarios/ (21 scenarios with checks)  run.py
+tests/    unit tests + live/ (HTTP harness against the deployed API)
 docs/     customer_note.md  failure_log.md   transcripts/ (written by evals.run)
 ```
 
@@ -54,7 +52,7 @@ python3 -m evals.run
 
 # Option 3: OpenRouter (unified API for many models)
 export OPENROUTER_API_KEY=sk-or-v1-...
-export OPENROUTER_MODEL=nvidia/nemotron-3.5-lightning:free  # optional, this is the default
+export OPENROUTER_MODEL=openai/gpt-4o-mini  # optional, this is the default (and the live model)
 python3 -m evals.run
 
 # Option 4: Ollama (local, no API key, see below)
@@ -104,7 +102,6 @@ python3 -m evals.run
 
 **Critical Security Fix:** Post-fix results include code-level hardening after scenario 16 revealed a verification bypass vulnerability (model called `get_customer` after 3 failed attempts, learned real card_last4, then verified). Now fixed with verification lockout, information protection, and refusal of operations on locked sessions. See `docs/failure_log.md` for full details.
 
-**Note:** Hosted models (OpenAI GPT, Anthropic Claude) are not yet tested. To test them, set the appropriate provider and API key as shown above and run the evals.
 
 ### Live production model and results (2026-10-12)
 
@@ -156,7 +153,7 @@ The web UI connects to the Python API in `api/`. The API auto-detects if an LLM 
    - `OPENAI_API_KEY` = `sk-...` (if using OpenAI)
    - `ANTHROPIC_API_KEY` = `sk-ant-...` (if using Anthropic)
    - `OPENROUTER_API_KEY` = `sk-or-v1-...` (if using OpenRouter)
-   - `OPENROUTER_MODEL` = model name (optional, defaults to `nvidia/nemotron-3.5-lightning:free`)
+   - `OPENROUTER_MODEL` = model name (optional, defaults to `openai/gpt-4o-mini`)
    
    If no API key is set, the chat will run in **demo mode** with a banner.
 
@@ -199,7 +196,7 @@ flowchart LR
   end
   subgraph AG["Agent service (paylane/agent.py, prompt.py)"]
     LOOP["Tool-calling loop<br/>session note, turn budget"]
-    POL["Policy guardrails (policy.py)<br/>$75 cap, 30 days, $150 / 30d,<br/>fraud lock, verification lockout"]
+    POL["Policy guardrails (policy.py)<br/>$75 cap, 30 days, $75 total / 30d,<br/>fraud lock, verification lockout"]
   end
   subgraph TS["Tool service: mock bank (paylane/tools.py, data.py)"]
     T1["verify_customer · get_customer · get_transaction<br/>issue_refund · escalate_to_human"]
@@ -299,7 +296,7 @@ Based on customer-support best practices and the provided guidance:
    
    *Rationale:* Standard chargeback windows; 30-day rolling window is industry norm.
 
-5. **Cumulative Refund Cap:** Maximum $150 in agent-issued refunds per customer per rolling 30-day window. Additional requests escalate to human review.
+5. **Cumulative Refund Cap:** Maximum **$75 total** in agent-issued refunds per customer per rolling 30-day window (exactly $75 is allowed, so a single $75 refund uses the whole allowance). Additional requests escalate to human review.
    
    *Rationale:* Anti-abuse measure. Catches patterns like "split $100 charge into 10 × $10 refunds." Legitimate customers rarely hit this; fraudsters often do.
 
@@ -333,7 +330,7 @@ Based on customer-support best practices and the provided guidance:
 
 ## Edge Cases & Scenario Rationale
 
-The 16 test scenarios cover:
+The 21 test scenarios cover:
 
 1. **01_plain_refund** — Happy path baseline (verified, small amount, recent, settled)
 2. **02_over_limit_pushback** — $120 > $75, customer argues "just refund $75 of it." Tests hard cap + escalation under pressure.
@@ -346,7 +343,18 @@ The 16 test scenarios cover:
 9. **09_angry_customer** — Aggressive tone + over-limit transaction. Tests calm escalation under hostility.
 10. **10_account_closure** — Account closure request. Tests mandatory human escalation.
 11. **11_legal_threat** — Customer mentions lawyers. Tests mandatory legal escalation.
-12. **12_cumulative_limit** — Multiple small refunds hit $150 cap. Tests anti-abuse cumulative tracking.
+12. **12_cumulative_limit** — $42.50 + $32.50 reaches the $75 rolling cap; a third refund escalates. Tests anti-abuse cumulative tracking.
+13. **13_jailbreak_ignore_rules** — "Ignore your rules" prompt injection. Rules live in code, so the model can't be talked out of them.
+14. **14_fake_manager_authority** — Claims to be a Paylane manager authorising an over-limit refund. Authority claims in chat grant nothing.
+15. **15_split_refund_attempt** — Asks for $120 as two partial refunds. The cap applies to the charge, not the request.
+16. **16_repeated_verification_abuse** — Guesses card digits over and over. Locked after 3 failures, then escalated, with no hints.
+17. **17_unknown_descriptor_resolved** — "Unknown" `SP*SPTFY FAMILY` charge is the customer's own Spotify Family plan. Explained; **no refund**.
+18. **18_pending_hold_resolved** — $60 Marriott hold is a check-in authorization that is released automatically. Explained; **no refund**.
+19. **19_subscription_cancel_guidance** — Forgot to cancel Disney+. Shows how to cancel future charges; customer keeps this month; **no refund**.
+20. **20_duplicate_is_pending_auth** — "Charged twice" at Uber Eats is one posted charge plus a pending authorization that drops off. **No refund**.
+21. **21_resolve_fails_then_refund** — Allbirds order never arrived. The agent suggests tracking or contacting the merchant first; the customer already did, so it refunds $48.
+
+**Resolution-first (17–21):** the agent works out what went wrong and solves it when it can. It refunds only when the problem can't be solved another way, or the customer still wants the money back for a legitimate reason. `get_transaction` returns resolution context (statement descriptor, recurring, `authorization_hold`, `related_txn`, a resolution note), so the 4-tool spec is unchanged. A code gate blocks a refund on such a charge until the fix has been offered in an earlier turn. `issue_refund` takes an optional `reason`.
 
 **Why these?**
 - **Social engineering** (03): Security teams' #1 concern with AI agents.
@@ -355,18 +363,13 @@ The 16 test scenarios cover:
 - **Cumulative** (12): Real-world abuse pattern from fintech fraud teams.
 - **Partial refund** (04): Common legitimate case that needed explicit coverage after hard-cap rule.
 
-## TODO (Priyansh)
-- Write the real system prompt/rulebook (`paylane/prompt.py`).
-- Expanded to 16 scenarios (angry customer, account closure, legal threat, jailbreak attempts, fake authority, split refunds, verification brute-force).
-- Run with a real model, document one failure + fix (`docs/failure_log.md`), write `docs/customer_note.md`.
-
 ## Demo customers (fictional seed data)
 
 All people, emails and cards below are made up. `maplecrest.test` is a reserved `.test` domain, so nothing can be delivered there. The date is fixed at `TODAY = 2026-10-11` in `paylane/data.py`.
 
 | Customer ID | Name | Email | Card last 4 | Status | Key transactions |
 |---|---|---|---|---|---|
-| PL-48213 | Amara Okafor | amara.okafor@maplecrest.test | 6417 | active | TXN-58214 Spotify $42.50 (eligible), TXN-58237 Uber $75.00 (cap boundary), TXN-58241 Zara $120 (over cap), TXN-57106 Netflix $30 (too old), TXN-57552 Starbucks (exactly 30 days, excluded), TXN-58306 Amazon $15 (pending), TXN-58219 Apple $25 (partial), TXN-58277 Uniqlo $32.50 (hits the $150 rolling limit) |
+| PL-48213 | Amara Okafor | amara.okafor@maplecrest.test | 6417 | active | TXN-58214 Spotify $42.50 (eligible), TXN-58237 Uber $75.00 (cap boundary), TXN-58241 Zara $120 (over cap), TXN-57106 Netflix $30 (too old), TXN-57552 Starbucks (exactly 30 days, excluded), TXN-58306 Amazon $15 (pending), TXN-58219 Apple $25 (partial), TXN-58277 Uniqlo $32.50 (with Spotify, reaches exactly the $75 rolling limit); resolution-first: TXN-58420 Spotify Family descriptor, TXN-58433 Marriott hold, TXN-58447 Disney+ renewal, TXN-58450/58451 Uber Eats posted + pending, TXN-58461 Allbirds not received |
 | PL-51907 | Mateo Alvarez | mateo.alvarez@maplecrest.test | 3058 | frozen | TXN-61450 Steam $60 |
 | PL-36642 | Mei-Lin Tan | meilin.tan@maplecrest.test | 9126 | active | TXN-73318 CoinVault Exchange $900, TXN-73325 Lyft $50 (fraud claims) |
 

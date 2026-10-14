@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c1",
+          "id": "call_my7L7NfVfDL3zF6cnuF2Hzgt",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c1",
+      "tool_call_id": "call_my7L7NfVfDL3zF6cnuF2Hzgt",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c2",
+          "id": "call_cx4ssjjMBKn3zalrMbG9l6yG",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-48213",
@@ -42,7 +42,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c2",
+      "tool_call_id": "call_cx4ssjjMBKn3zalrMbG9l6yG",
       "name": "get_transaction",
       "content": "{\"amount\": 120.0, \"date\": \"2026-10-03\", \"merchant\": \"Zara\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": false, \"reason\": \"over_auto_limit_escalate\", \"refundable_remaining\": 120.0}}"
     },
@@ -51,24 +51,24 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c3",
+          "id": "call_Xg8fJtNUzhYTJTXUiPHwS62u",
           "name": "escalate_to_human",
           "arguments": {
             "customer_id": "PL-48213",
-            "summary": "$120 Zara refund request, over auto limit"
+            "summary": "Customer requested a refund for TXN-58241, but the amount exceeds the auto-approval limit."
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "c3",
+      "tool_call_id": "call_Xg8fJtNUzhYTJTXUiPHwS62u",
       "name": "escalate_to_human",
       "content": "{\"ticket_id\": \"TK0001\"}"
     },
     {
       "role": "assistant",
-      "content": "That transaction is over what I can approve. I've escalated it to a teammate."
+      "content": "I've escalated your request for the refund of TXN-58241 to a specialist, as the amount exceeds the auto-approval limit. A specialist will follow up with you by email."
     }
   ],
   "tool_calls": [
@@ -105,7 +105,7 @@
       "escalate_to_human",
       {
         "customer_id": "PL-48213",
-        "summary": "$120 Zara refund request, over auto limit"
+        "summary": "Customer requested a refund for TXN-58241, but the amount exceeds the auto-approval limit."
       },
       {
         "ticket_id": "TK0001"

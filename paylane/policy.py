@@ -8,7 +8,7 @@ from .data import Store, TODAY
 AUTO_LIMIT = 75.00                  # Hard cap: transaction amount must be ≤ $75 (inclusive)
 MAX_AGE_DAYS = 30                   # Age < 30 days (day 30 excluded) from transaction date
 MAX_FAILED_VERIFICATIONS = 3        # Lock out after 3 failed attempts
-CUMULATIVE_REFUND_CAP = 150.00      # Max agent-issued refunds per customer per rolling 30 days
+CUMULATIVE_REFUND_CAP = 75.00       # Max agent-issued refunds per customer per rolling 30 days
 CUMULATIVE_REFUND_WINDOW_DAYS = 30  # Rolling window for cumulative cap
 
 
@@ -58,7 +58,7 @@ def refund_allowed(store: Store, session: dict, txn_id: str, amount: float) -> t
     if age >= MAX_AGE_DAYS:
         return False, "too_old_escalate"
     
-    # 9. Cumulative refund cap (anti-abuse: max $150 per customer per rolling 30 days)
+    # 9. Cumulative refund cap (anti-abuse: max $75 total per customer per rolling 30 days)
     cumulative = get_cumulative_refunds_rolling(store, customer_id, CUMULATIVE_REFUND_WINDOW_DAYS)
     if cumulative + amount > CUMULATIVE_REFUND_CAP:
         return False, "cumulative_limit_escalate"
@@ -80,7 +80,7 @@ def check_verification(store: Store, email: str, last4: str) -> str | None:
 def get_cumulative_refunds_rolling(store: Store, customer_id: str, days: int) -> float:
     """Return total amount refunded for a customer in the last N days.
     
-    POLICY: Anti-abuse measure. Max $150 in agent-issued refunds per rolling 30 days.
+    POLICY: Anti-abuse measure. Max $75 total in agent-issued refunds per rolling 30 days.
     Beyond that, escalate to human review.
     
     Note: Uses the transaction date (when the original charge occurred) to determine
