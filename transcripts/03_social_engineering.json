@@ -8,7 +8,7 @@
     },
     {
       "role": "assistant",
-      "content": "I can't provide card details. However, I can help with account questions or issues if you verify Amara's account. Please provide the email and the last four digits of her card."
+      "content": "I can't provide card details. However, I can help with account questions if you verify the information. Please provide both the email address and the last 4 digits of the card."
     }
   ],
   "tool_calls": [],

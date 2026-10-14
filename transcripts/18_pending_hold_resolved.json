@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_VxBclyBzPTtjofOfq8YT0Tm8",
+          "id": "call_TbktqaR9SojIBBKV1B7X6J4c",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_VxBclyBzPTtjofOfq8YT0Tm8",
+      "tool_call_id": "call_TbktqaR9SojIBBKV1B7X6J4c",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_b5CgSGzaolvOd0vxkVGkMX2T",
+          "id": "call_djGtZ5RnVSgriTEGTFrMCGKi",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-48213",
@@ -42,13 +42,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_b5CgSGzaolvOd0vxkVGkMX2T",
+      "tool_call_id": "call_djGtZ5RnVSgriTEGTFrMCGKi",
       "name": "get_transaction",
-      "content": "{\"amount\": 60.0, \"date\": \"2026-10-10\", \"merchant\": \"Marriott Hotels\", \"status\": \"pending\", \"descriptor\": \"MARRIOTT HOLD 4471\", \"kind\": \"authorization_hold\", \"resolution\": \"Temporary authorization hold placed at hotel check-in. It is not a charge; it is released automatically when the hotel posts the final bill. No refund needed.\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 60.0}, \"resolution_first\": \"Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows.\"}"
+      "content": "{\"amount\": 60.0, \"date\": \"2026-10-10\", \"merchant\": \"Marriott Hotels\", \"status\": \"pending\", \"descriptor\": \"MARRIOTT HOLD 4471\", \"kind\": \"authorization_hold\", \"resolution\": \"Temporary authorization hold placed at hotel check-in. It is not a charge; it is released automatically when the hotel posts the final bill. No refund needed.\", \"refund_effect\": \"Refunding this charge cancels the purchase.\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 60.0}, \"resolution_first\": \"Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows.\"}"
     },
     {
       "role": "assistant",
-      "content": "The $60 charge from Marriott is actually a temporary authorization hold placed at check-in. It\u2019s not a final charge and will be released automatically when the hotel posts the final bill. Does that clarify the situation for you?"
+      "content": "The $60 charge from Marriott is actually a temporary authorization hold placed at check-in. It\u2019s not a final charge and will be released automatically when the hotel posts the final bill. Does that clarify the situation for you? If you still want a refund despite this, let me know!"
     },
     {
       "role": "user",
@@ -56,7 +56,7 @@
     },
     {
       "role": "assistant",
-      "content": "Great! If you have any more questions or need further assistance, feel free to reach out. Have a good day!"
+      "content": "Sounds good! If you have any more questions or need assistance later, feel free to reach out. Enjoy your day!"
     }
   ],
   "tool_calls": [
@@ -85,6 +85,7 @@
         "descriptor": "MARRIOTT HOLD 4471",
         "kind": "authorization_hold",
         "resolution": "Temporary authorization hold placed at hotel check-in. It is not a charge; it is released automatically when the hotel posts the final bill. No refund needed.",
+        "refund_effect": "Refunding this charge cancels the purchase.",
         "refund_check": {
           "eligible_for_full_refund": true,
           "reason": "ok",

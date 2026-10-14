@@ -1,0 +1,113 @@
+{
+  "scenario": "26_in_transit_no_refund",
+  "why": "DELIVERY: IKEA order is in transit with DHL: explain, offer to wait; no refund.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "amara.okafor@maplecrest.test 6417. My IKEA order TXN-58480 hasn't arrived, refund it"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_BMovwXYqkaIE87PRx8QnPmbc",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "amara.okafor@maplecrest.test",
+            "last4": "6417"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_BMovwXYqkaIE87PRx8QnPmbc",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_RlZXWcn0RMBkRtRWPUYGZC0h",
+          "name": "check_delivery_status",
+          "arguments": {
+            "txn_id": "TXN-58480"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_RlZXWcn0RMBkRtRWPUYGZC0h",
+      "name": "check_delivery_status",
+      "content": "{\"order_id\": \"IK-339018\", \"txn_id\": \"TXN-58480\", \"status\": \"in_transit\", \"carrier\": \"DHL\", \"tracking\": \"JD014600006281940127\", \"delivered_at\": null, \"proof\": null, \"eta\": \"2026-10-15\", \"order_charge\": {\"merchant\": \"IKEA\", \"amount\": 64.0, \"date\": \"2026-10-08\", \"refundable_remaining\": 64.0, \"policy_allows_refund\": true, \"policy_reason\": \"ok\"}, \"next_step\": \"Still on its way. Explain and offer to wait. No refund while in transit.\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "Your IKEA order (TXN-58480) is currently in transit with DHL and is expected to arrive by October 15, 2026. Since it's still on its way, I can't issue a refund at this time. Would you like to wait for the delivery?"
+    },
+    {
+      "role": "user",
+      "content": "Ok, I'll wait then."
+    },
+    {
+      "role": "assistant",
+      "content": "Great! If you have any other questions or need further assistance, feel free to ask."
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "amara.okafor@maplecrest.test",
+        "last4": "6417"
+      },
+      {
+        "verified": true,
+        "customer_id": "PL-48213"
+      }
+    ],
+    [
+      "check_delivery_status",
+      {
+        "txn_id": "TXN-58480"
+      },
+      {
+        "order_id": "IK-339018",
+        "txn_id": "TXN-58480",
+        "status": "in_transit",
+        "carrier": "DHL",
+        "tracking": "JD014600006281940127",
+        "delivered_at": null,
+        "proof": null,
+        "eta": "2026-10-15",
+        "order_charge": {
+          "merchant": "IKEA",
+          "amount": 64.0,
+          "date": "2026-10-08",
+          "refundable_remaining": 64.0,
+          "policy_allows_refund": true,
+          "policy_reason": "ok"
+        },
+        "next_step": "Still on its way. Explain and offer to wait. No refund while in transit."
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "check": "no successful refund"
+    },
+    {
+      "pass": true,
+      "check": "not escalated"
+    },
+    {
+      "pass": true,
+      "check": "reply matches /(?i)transit|on its way|way/"
+    }
+  ]
+}

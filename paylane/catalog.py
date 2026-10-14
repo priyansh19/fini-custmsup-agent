@@ -1,12 +1,23 @@
 """Demo catalog served by /api/scenarios: personas (mock-bank customers) and scenario cards.
 Derived from the mock bank (paylane.data) so the UI never drifts from the backend."""
-from .data import _CUSTOMERS, _TRANSACTIONS, TODAY
+from .data import _CUSTOMERS, _TRANSACTIONS, _DELIVERIES, TODAY
+
+
+def _ids(t):
+    return {k for k, v in _TRANSACTIONS.items() if v is t}
 from .policy import AUTO_LIMIT, MAX_AGE_DAYS, CUMULATIVE_REFUND_CAP
 from datetime import date
 
 
 def _txn_hint(t):
     age = (TODAY - date.fromisoformat(t["date"])).days
+    if t.get("kind") == "authorization_hold": return "temporary hold · drops off"
+    if t.get("kind") == "subscription":
+        if age >= MAX_AGE_DAYS: return f"{age} days old → specialist"
+        return "subscription · full refund today" if age == 0 else f"subscription · day {age} → prorated"
+    if t.get("kind") == "order":
+        st = next((d["status"] for d in _DELIVERIES.values() if d["txn_id"] in _ids(t)), None)
+        return "order · " + (st or "").replace("_", " ")
     if t["amount"] > AUTO_LIMIT: return "over $75 → specialist"
     if age >= MAX_AGE_DAYS: return f"{age} days old → specialist"
     return "pending · refundable" if t["status"] == "pending" else "refundable"
@@ -45,8 +56,16 @@ SCENARIOS = [
      "message": "Uber Eats charged me twice, TXN-58450 and TXN-58451. amara.okafor@maplecrest.test 6417"},
     {"id": "subscription", "title": "Forgot to cancel", "emoji": "🔁", "persona": "PL-48213", "expect": "Help cancelling",
      "message": "I forgot to cancel Disney+ and got billed again (TXN-58447). amara.okafor@maplecrest.test 6417"},
-    {"id": "notarrived", "title": "Order never arrived", "emoji": "📦", "persona": "PL-48213", "expect": "Tries a fix, then refunds",
+    {"id": "notarrived", "title": "Delivered, but not here", "emoji": "📦", "persona": "PL-48213", "expect": "Asks for proof, then refunds",
      "message": "My Allbirds order TXN-58461 never arrived. amara.okafor@maplecrest.test 6417"},
+    {"id": "intransit", "title": "Where's my order?", "emoji": "🚚", "persona": "PL-48213", "expect": "In transit, no refund",
+     "message": "My IKEA order TXN-58480 hasn't arrived, refund it. amara.okafor@maplecrest.test 6417"},
+    {"id": "lost", "title": "Parcel lost", "emoji": "🕳️", "persona": "PL-48213", "expect": "Cancel order + refund",
+     "message": "My Nike order TXN-58485 never came. amara.okafor@maplecrest.test 6417"},
+    {"id": "sameday", "title": "Cancel today's sub", "emoji": "🧘", "persona": "PL-48213", "expect": "Full refund (day 0)",
+     "message": "I signed up for Headspace by mistake today, TXN-58470. Cancel and refund please. amara.okafor@maplecrest.test 6417"},
+    {"id": "prorated", "title": "Cancel mid-month", "emoji": "🎨", "persona": "PL-48213", "expect": "Prorated $30.00",
+     "message": "I don't use Adobe anymore, cancel TXN-58475 and refund me. amara.okafor@maplecrest.test 6417"},
     {"id": "noverify", "title": "No details given", "emoji": "❓", "persona": None, "expect": "Asks to verify",
      "message": "I want a refund."},
 ]

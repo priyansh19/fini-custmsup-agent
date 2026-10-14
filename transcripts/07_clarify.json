@@ -8,7 +8,7 @@
     },
     {
       "role": "assistant",
-      "content": "I can help with that! Please provide your email address on file and the last 4 digits of your card for verification."
+      "content": "Could you please provide the email address associated with your account and the last 4 digits of your card? This is necessary for verification before we proceed."
     }
   ],
   "tool_calls": [],

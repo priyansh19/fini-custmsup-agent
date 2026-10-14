@@ -1,0 +1,145 @@
+{
+  "scenario": "21_lost_order_refund",
+  "why": "RESOLUTION-FIRST: Nike order never arrived. check_delivery_status shows the carrier lost it, so the agent says refunding cancels the order, gets a yes, refunds $55.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "amara.okafor@maplecrest.test 6417. My Nike order TXN-58485 never arrived"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_opmOoF0qCjtBnDog7T27mIpo",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "amara.okafor@maplecrest.test",
+            "last4": "6417"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_opmOoF0qCjtBnDog7T27mIpo",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_7QUEVnr6QLkNpTscATpuIoGJ",
+          "name": "check_delivery_status",
+          "arguments": {
+            "txn_id": "TXN-58485"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_7QUEVnr6QLkNpTscATpuIoGJ",
+      "name": "check_delivery_status",
+      "content": "{\"order_id\": \"NK-582201\", \"txn_id\": \"TXN-58485\", \"status\": \"lost\", \"carrier\": \"FedEx\", \"tracking\": \"781234567890\", \"delivered_at\": null, \"proof\": \"Carrier marked the parcel lost in transit on 2026-10-06\", \"order_charge\": {\"merchant\": \"Nike\", \"amount\": 55.0, \"date\": \"2026-09-29\", \"refundable_remaining\": 55.0, \"policy_allows_refund\": true, \"policy_reason\": \"ok\"}, \"next_step\": \"Carrier lost it. Offer a refund of refundable_remaining (tell them refunding cancels the order and get a yes first). Use the exact amount from order_charge.\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "Your Nike order (TXN-58485) was marked as lost in transit by FedEx on October 6. Since the order is lost, I can offer you a refund of $55.00. Please note that refunding will cancel the order, and you will not receive the item. Would you like to proceed with the refund?"
+    },
+    {
+      "role": "user",
+      "content": "Yes, cancel it and refund me."
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_iPD7S3chKIke53FIDAk0Tvh5",
+          "name": "issue_refund",
+          "arguments": {
+            "txn_id": "TXN-58485",
+            "amount": 55,
+            "reason": "Order lost in transit"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_iPD7S3chKIke53FIDAk0Tvh5",
+      "name": "issue_refund",
+      "content": "{\"ok\": true, \"refund_id\": \"R0001\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "Done, $55.00 is on its way back to you. Your order has been canceled. If you need anything else, just let me know!"
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "amara.okafor@maplecrest.test",
+        "last4": "6417"
+      },
+      {
+        "verified": true,
+        "customer_id": "PL-48213"
+      }
+    ],
+    [
+      "check_delivery_status",
+      {
+        "txn_id": "TXN-58485"
+      },
+      {
+        "order_id": "NK-582201",
+        "txn_id": "TXN-58485",
+        "status": "lost",
+        "carrier": "FedEx",
+        "tracking": "781234567890",
+        "delivered_at": null,
+        "proof": "Carrier marked the parcel lost in transit on 2026-10-06",
+        "order_charge": {
+          "merchant": "Nike",
+          "amount": 55.0,
+          "date": "2026-09-29",
+          "refundable_remaining": 55.0,
+          "policy_allows_refund": true,
+          "policy_reason": "ok"
+        },
+        "next_step": "Carrier lost it. Offer a refund of refundable_remaining (tell them refunding cancels the order and get a yes first). Use the exact amount from order_charge."
+      }
+    ],
+    [
+      "issue_refund",
+      {
+        "txn_id": "TXN-58485",
+        "amount": 55,
+        "reason": "Order lost in transit"
+      },
+      {
+        "ok": true,
+        "refund_id": "R0001"
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "check": "refund issued for TXN-58485"
+    },
+    {
+      "pass": true,
+      "check": "not escalated"
+    },
+    {
+      "pass": true,
+      "check": "reply matches /(?i)lost/"
+    }
+  ]
+}

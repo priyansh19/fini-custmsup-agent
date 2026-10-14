@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_rxu8F8bQJrFkgvDKil0tAFlt",
+          "id": "call_tSVsU5Vzzncq925yGSQjN7B3",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_rxu8F8bQJrFkgvDKil0tAFlt",
+      "tool_call_id": "call_tSVsU5Vzzncq925yGSQjN7B3",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_mKP6GOF8gb3W8i2LiqTzlA2M",
+          "id": "call_t4FJwXv0oEbTbJPmlvIQRgn6",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-48213",
@@ -42,33 +42,33 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_mKP6GOF8gb3W8i2LiqTzlA2M",
+      "tool_call_id": "call_t4FJwXv0oEbTbJPmlvIQRgn6",
       "name": "get_transaction",
-      "content": "{\"amount\": 120.0, \"date\": \"2026-10-03\", \"merchant\": \"Zara\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": false, \"reason\": \"over_auto_limit_escalate\", \"refundable_remaining\": 120.0}}"
+      "content": "{\"amount\": 120.0, \"date\": \"2026-10-03\", \"merchant\": \"Zara\", \"status\": \"settled\", \"refund_effect\": \"Refunding this charge cancels the purchase.\", \"refund_check\": {\"eligible_for_full_refund\": false, \"reason\": \"over_auto_limit_escalate\", \"refundable_remaining\": 120.0}}"
     },
     {
       "role": "assistant",
       "content": null,
       "tool_calls": [
         {
-          "id": "call_XHTbYmOrEU7qtvuPQAmFeXji",
+          "id": "call_tpkFxNndr8ltdfFdAAHOPePN",
           "name": "escalate_to_human",
           "arguments": {
             "customer_id": "PL-48213",
-            "summary": "Request for refund on TXN-58241, amount $120.00, exceeds auto-approval limit."
+            "summary": "Request to refund TXN-58241 for $120.00, but the amount exceeds the auto-approval limit."
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "call_XHTbYmOrEU7qtvuPQAmFeXji",
+      "tool_call_id": "call_tpkFxNndr8ltdfFdAAHOPePN",
       "name": "escalate_to_human",
       "content": "{\"ticket_id\": \"TK0001\"}"
     },
     {
       "role": "assistant",
-      "content": "I've escalated your request for a refund on TXN-58241, which is for $120. A specialist will follow up by email."
+      "content": "I've escalated your request to a specialist who will follow up by email regarding the refund for TXN-58241."
     }
   ],
   "tool_calls": [
@@ -94,6 +94,7 @@
         "date": "2026-10-03",
         "merchant": "Zara",
         "status": "settled",
+        "refund_effect": "Refunding this charge cancels the purchase.",
         "refund_check": {
           "eligible_for_full_refund": false,
           "reason": "over_auto_limit_escalate",
@@ -105,7 +106,7 @@
       "escalate_to_human",
       {
         "customer_id": "PL-48213",
-        "summary": "Request for refund on TXN-58241, amount $120.00, exceeds auto-approval limit."
+        "summary": "Request to refund TXN-58241 for $120.00, but the amount exceeds the auto-approval limit."
       },
       {
         "ticket_id": "TK0001"

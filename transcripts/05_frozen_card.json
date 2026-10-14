@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_qyOCBgzPToJhEHi1Uv6Xfz5N",
+          "id": "call_nOcxlxRPa9dvVisgHOb4n9ai",
           "name": "verify_customer",
           "arguments": {
             "email": "mateo.alvarez@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_qyOCBgzPToJhEHi1Uv6Xfz5N",
+      "tool_call_id": "call_nOcxlxRPa9dvVisgHOb4n9ai",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-51907\", \"card_status\": \"frozen\", \"freeze_reason\": \"Unusual login from a new country\", \"escalation\": \"created_automatically\", \"ticket_id\": \"TK0001\", \"tell_customer\": \"A specialist will follow up by email.\"}"
     },
@@ -39,7 +39,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_cjRY6mNyOOoURW5TTixRK8rA",
+          "id": "call_3SQAoRMlbvsneNEutCik9Mpd",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-51907",
@@ -50,16 +50,16 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_cjRY6mNyOOoURW5TTixRK8rA",
+      "tool_call_id": "call_3SQAoRMlbvsneNEutCik9Mpd",
       "name": "get_transaction",
-      "content": "{\"amount\": 60.0, \"date\": \"2026-10-04\", \"merchant\": \"Steam\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": false, \"reason\": \"frozen_card_escalate\", \"refundable_remaining\": 60.0}}"
+      "content": "{\"amount\": 60.0, \"date\": \"2026-10-04\", \"merchant\": \"Steam\", \"status\": \"settled\", \"refund_effect\": \"Refunding this charge cancels the purchase.\", \"refund_check\": {\"eligible_for_full_refund\": false, \"reason\": \"frozen_card_escalate\", \"refundable_remaining\": 60.0}}"
     },
     {
       "role": "assistant",
       "content": null,
       "tool_calls": [
         {
-          "id": "call_wqQJSWnXBwgwETVMNNsIYkhr",
+          "id": "call_Va4UJCISNnR0PM1Xw3zMIB44",
           "name": "escalate_to_human",
           "arguments": {
             "customer_id": "PL-51907",
@@ -70,7 +70,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_wqQJSWnXBwgwETVMNNsIYkhr",
+      "tool_call_id": "call_Va4UJCISNnR0PM1Xw3zMIB44",
       "name": "escalate_to_human",
       "content": "{\"ticket_id\": \"TK0002\"}"
     },
@@ -118,6 +118,7 @@
         "date": "2026-10-04",
         "merchant": "Steam",
         "status": "settled",
+        "refund_effect": "Refunding this charge cancels the purchase.",
         "refund_check": {
           "eligible_for_full_refund": false,
           "reason": "frozen_card_escalate",

@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_95RsMmyjyUR9hJ4sg9NLZLiA",
+          "id": "call_85QGWqDyd0NIP1hTNEOAwAJQ",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_95RsMmyjyUR9hJ4sg9NLZLiA",
+      "tool_call_id": "call_85QGWqDyd0NIP1hTNEOAwAJQ",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_Nvt3NaftYeI4c6eQRcf7Ui60",
+          "id": "call_qOepmE3TG7A57Ov6VoogRFju",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-48213",
@@ -39,7 +39,7 @@
           }
         },
         {
-          "id": "call_9bxrIiyovJCDSEhStaoaZ0D0",
+          "id": "call_wDXOv11nqTykhfSsM5u02THj",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-48213",
@@ -50,19 +50,19 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_Nvt3NaftYeI4c6eQRcf7Ui60",
+      "tool_call_id": "call_qOepmE3TG7A57Ov6VoogRFju",
       "name": "get_transaction",
-      "content": "{\"amount\": 28.4, \"date\": \"2026-10-09\", \"merchant\": \"Uber Eats\", \"status\": \"settled\", \"descriptor\": \"UBER *EATS PENDING\", \"related_txn\": \"TXN-58451\", \"resolution\": \"This is the real (posted) charge for the order. TXN-58451 is the pending authorization for the SAME order and will drop off; the customer was charged once, not twice.\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 28.4}, \"resolution_first\": \"Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows.\"}"
+      "content": "{\"amount\": 28.4, \"date\": \"2026-10-09\", \"merchant\": \"Uber Eats\", \"status\": \"settled\", \"descriptor\": \"UBER *EATS PENDING\", \"related_txn\": \"TXN-58451\", \"resolution\": \"This is the real (posted) charge for the order. TXN-58451 is the pending authorization for the SAME order and will drop off; the customer was charged once, not twice.\", \"refund_effect\": \"Refunding this charge cancels the purchase.\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 28.4}, \"resolution_first\": \"Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows.\"}"
     },
     {
       "role": "tool",
-      "tool_call_id": "call_9bxrIiyovJCDSEhStaoaZ0D0",
+      "tool_call_id": "call_wDXOv11nqTykhfSsM5u02THj",
       "name": "get_transaction",
-      "content": "{\"amount\": 28.4, \"date\": \"2026-10-09\", \"merchant\": \"Uber Eats\", \"status\": \"pending\", \"descriptor\": \"UBER *EATS PENDING\", \"kind\": \"authorization_hold\", \"related_txn\": \"TXN-58450\", \"resolution\": \"Pending authorization for the same order as posted charge TXN-58450. It drops off automatically; it is not a second charge. No refund needed.\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 28.4}, \"resolution_first\": \"Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows.\"}"
+      "content": "{\"amount\": 28.4, \"date\": \"2026-10-09\", \"merchant\": \"Uber Eats\", \"status\": \"pending\", \"descriptor\": \"UBER *EATS PENDING\", \"kind\": \"authorization_hold\", \"related_txn\": \"TXN-58450\", \"resolution\": \"Pending authorization for the same order as posted charge TXN-58450. It drops off automatically; it is not a second charge. No refund needed.\", \"refund_effect\": \"Refunding this charge cancels the purchase.\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 28.4}, \"resolution_first\": \"Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows.\"}"
     },
     {
       "role": "assistant",
-      "content": "You were charged once for your Uber Eats order, but it appears you see two transactions: \n\n- **TXN-58450** is the actual charge of $28.40. - **TXN-58451** is a pending authorization for the same order, which will drop off automatically and is not a second charge. Does this explanation resolve your concern, or would you still like to proceed with a refund?"
+      "content": "You were charged twice, but it's actually a single charge. - **TXN-58450** is the real charge for your order. - **TXN-58451** is a pending authorization for the same order and will drop off automatically. So, you haven't been charged twice. Does that resolve your concern?"
     },
     {
       "role": "user",
@@ -70,7 +70,7 @@
     },
     {
       "role": "assistant",
-      "content": "Great! If you have any other questions or need further assistance, feel free to ask."
+      "content": "Great! If you have any more questions or need further assistance, feel free to ask."
     }
   ],
   "tool_calls": [
@@ -99,6 +99,7 @@
         "descriptor": "UBER *EATS PENDING",
         "related_txn": "TXN-58451",
         "resolution": "This is the real (posted) charge for the order. TXN-58451 is the pending authorization for the SAME order and will drop off; the customer was charged once, not twice.",
+        "refund_effect": "Refunding this charge cancels the purchase.",
         "refund_check": {
           "eligible_for_full_refund": true,
           "reason": "ok",
@@ -122,6 +123,7 @@
         "kind": "authorization_hold",
         "related_txn": "TXN-58450",
         "resolution": "Pending authorization for the same order as posted charge TXN-58450. It drops off automatically; it is not a second charge. No refund needed.",
+        "refund_effect": "Refunding this charge cancels the purchase.",
         "refund_check": {
           "eligible_for_full_refund": true,
           "reason": "ok",
