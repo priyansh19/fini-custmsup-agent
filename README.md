@@ -5,9 +5,10 @@ An LLM customer-support agent for **Paylane**, a fintech handling cards, transfe
 **Live demo:** https://fini-custmsup-agent.vercel.app · **Developer view:** https://fini-custmsup-agent.vercel.app/admin
 Model: `openai/gpt-4o-mini` via OpenRouter.
 
-| Real-model eval | Scripted eval | Unit tests |
-|---|---|---|
-| **26/26** ([transcripts](transcripts/)) | **26/26** | **68/68** |
+| Mode | Real-model eval | Scripted eval | Unit tests |
+|---|---|---|---|
+| **Expanded** (default, submitted) | **26/26** ([transcripts](transcripts/)) | **26/26** | **68/68** |
+| **Brief-only** ([details](#brief-only-mode-vs-expanded-mode)) | offline only | **22/22** | **40/40** |
 
 | Help page | Chat in progress |
 |---|---|
@@ -16,6 +17,50 @@ Model: `openai/gpt-4o-mini` via OpenRouter.
 | Mobile | Developer / evaluator view |
 |---|---|
 | <img src="docs/images/help_mobile.png" width="260"> | ![Admin](docs/images/admin.png) |
+
+## Brief-only mode vs expanded mode
+
+The agent ships with two policy modes, side by side, so the brief and the extended design can be compared directly.
+
+- **Brief-only mode** runs Deepak's Paylane brief exactly: the 4 spec tools, full-transaction refunds only, eligibility on the original transaction amount, and nothing else.
+- **Expanded mode** is the submitted version: the brief plus the resolution-first extras. It stays the default, so the live demo behaves exactly as submitted.
+
+**Switching modes**
+- **Help page:** use the **Brief-only / Expanded** toggle in the hero, or open `https://fini-custmsup-agent.vercel.app/?mode=brief`. The active mode shows in the nav badge, the chat header and the footer line. Switching starts a new chat.
+- **Developer view:** `/admin` → *Policy mode*.
+- **API:** `POST /api/chat` with `{"message": "...", "policy_mode": "brief"}`. A conversation keeps the mode it started in, because the mode is stored in the signed state.
+- **Server default:** `PAYLANE_POLICY_MODE=brief|expanded` (the default is `expanded`).
+- **Evals:** `python -m evals.run --scripted --mode brief`
+
+| Rule | Brief-only mode | Expanded mode |
+|---|---|---|
+| Auto-refund ≤ $75 per transaction, under 30 days, verified [From Deepak's brief] | ✅ | ✅ |
+| Over $75 or 30+ days → escalate [From Deepak's brief] | ✅ | ✅ |
+| Never refund the same transaction twice [From Deepak's brief] | ✅ any refund on a transaction closes it | ✅ |
+| Verify email + card last 4 before any detail; never reveal them [From Deepak's brief] | ✅ checked in code inside `get_customer` | ✅ via a `verify_customer` helper |
+| Frozen card: explain, can't unfreeze, escalate [From Deepak's brief] | ✅ | ✅ |
+| Legal action, fraud over $500, account closure → human [From Deepak's brief] | ✅ | ✅ |
+| Tools exposed to the model | The 4 spec tools | 4 spec tools + `verify_customer` + `check_delivery_status` [Our addition] |
+| Pending charges | Rejected (`pending_not_refundable`) | Refundable [Our addition] |
+| Partial refunds | Rejected: full transaction amount only | Allowed up to the remaining amount [Our addition] |
+| Eligibility amount | Original transaction amount | Original transaction amount |
+| Rolling $75 per customer per 30 days | Not applied | ✅ [Our addition] |
+| Subscription proration | Not applied: eligible subscriptions refund in full | ✅ [Our addition] |
+| Refund = cancellation, confirmed with a yes | Not applied | ✅ [Our addition] |
+| Delivery check + proof of non-delivery | Not applied | ✅ [Our addition] |
+| Resolution-first (explain holds and descriptors, ask what went wrong) | Not applied | ✅ [Our addition] |
+| 3-strike verification lockout | ✅ [Interpretation of "verify before any account detail"] | ✅ |
+
+| Scores, labelled by mode | Unit tests | Scripted eval (offline) | Real-model eval |
+|---|---|---|---|
+| **Brief-only mode** | **40/40** (`tests/test_brief_mode.py`) | **22/22** (`--mode brief`) | Not run: offline evaluation only, as agreed |
+| **Expanded mode** (submitted) | **68/68** | **26/26** | **26/26** on `openai/gpt-4o-mini` (2026-10-14) |
+
+The full suite is 108/108 with either `PAYLANE_POLICY_MODE` setting.
+
+| Brief-only mode: help page | Brief-only mode: refund with tool calls |
+|---|---|
+| ![Brief help page](docs/images/brief_help.png) | ![Brief chat](docs/images/brief_refund.png) |
 
 ## What it does
 

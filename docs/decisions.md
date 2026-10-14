@@ -91,3 +91,14 @@ All demo customers are fictional, on the reserved `maplecrest.test` domain, with
 - orders in each delivery state
 
 `TODAY` is fixed, so age rules are deterministic.
+
+### ADR-17 · Brief-only mode alongside the expanded mode · 2026-10-15
+Brief-only mode runs Deepak's brief exactly. Expanded mode stays the default and is untouched, so the two can be compared directly, with their scores labelled separately.
+- **Separate agent class.** `paylane/brief.py` (`BriefAgent`) is selected by `make_agent()` from `PAYLANE_POLICY_MODE`, or per request with `policy_mode`. The expanded `Agent` and its gates are byte-for-byte unchanged, so its 26/26 real-model result still describes it. The mode is stored in the HMAC-signed state, so one conversation never mixes policies.
+- **Refund rules [From Deepak's brief].** In order: verified → owns the transaction → card not frozen → no refund ever issued on the transaction → not pending → amount equals the full transaction amount → original transaction amount ≤ $75 → under 30 days. Any failure blocks `issue_refund` in code (`brief_refund_allowed`). The $75 test always uses the original amount, so asking for $50 of a $120 charge is still a partial request and still over the limit.
+- **Only the 4 spec tools.** The brief's API has no verification endpoint, so verification happens inside `get_customer`: code checks the email the model looks up against the card last 4 the customer typed in chat. The answer is the same whether the email exists or not, and `card_last4` never reaches the model.
+- **Escalations [From Deepak's brief].** Over $75, 30+ days, frozen card (auto-escalated on verification), legal action, fraud over $500 and account closure all go to a human. Replies keep the "A specialist will follow up by email" wording; the shared sanitiser removes any timeline.
+- **Interpretations, labelled.** The 3-strike lockout is kept as part of "verify before discussing any account detail". A fraud claim of any size is not auto-refunded, which keeps refunds within "never promise things the policy doesn't allow".
+- **Not in this mode.** The rolling $75 cap, subscription proration, refund-as-cancellation with a yes, delivery proof with `check_delivery_status`, pending refunds, partial refunds and the resolution-first gates. All of them remain in expanded mode, each marked [Our addition].
+- **UI.** The help page has a Brief-only / Expanded toggle (also `?mode=brief`), a mode badge in the nav and the chat header, a brief policy panel listing every rule plus the 4 tools, 12 scenario cards (one per brief rule, each tagged with its rule) and a live tool-call trace in the chat.
+- **Evaluation.** 22 scripted brief scenarios and 40 brief unit tests, offline only (no paid model runs for this mode).
