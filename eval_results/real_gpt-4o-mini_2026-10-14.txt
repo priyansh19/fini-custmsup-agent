@@ -18,6 +18,11 @@
 [PASS] 18_pending_hold_resolved
 [PASS] 19_subscription_cancel_guidance
 [PASS] 20_duplicate_is_pending_auth
-[PASS] 21_resolve_fails_then_refund
+[PASS] 21_lost_order_refund
+[PASS] 22_same_day_cancel_full_refund
+[PASS] 23_mid_period_prorated_refund
+[PASS] 24_delivered_missing_proof_then_refund
+[PASS] 25_delivered_no_proof_escalates
+[PASS] 26_in_transit_no_refund
 
-Score: 21/21
+Score: 26/26

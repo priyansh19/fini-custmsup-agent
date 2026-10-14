@@ -1,6 +1,6 @@
 {
   "scenario": "01_plain_refund",
-  "why": "Happy path: clear reason (cancelled but still billed), verified, $42.50, 10 days old: refund straight away.",
+  "why": "Happy path: clear reason (cancelled but still billed), verified, $42.50, 10 days old. Agent states refund = cancellation, customer confirms, refund.",
   "messages": [
     {
       "role": "user",
@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_L6lyeiqIvmdTuhkBnXC228wY",
+          "id": "call_4341X26UHtERiGLephdy6USE",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_L6lyeiqIvmdTuhkBnXC228wY",
+      "tool_call_id": "call_4341X26UHtERiGLephdy6USE",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_j7k2lQ84cuklsyQQlZY6f0hu",
+          "id": "call_mgb2tDqTnwKKpZZOp2gA5Z6X",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-48213",
@@ -42,16 +42,24 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_j7k2lQ84cuklsyQQlZY6f0hu",
+      "tool_call_id": "call_mgb2tDqTnwKKpZZOp2gA5Z6X",
       "name": "get_transaction",
-      "content": "{\"amount\": 42.5, \"date\": \"2026-10-01\", \"merchant\": \"Spotify\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 42.5}}"
+      "content": "{\"amount\": 42.5, \"date\": \"2026-10-01\", \"merchant\": \"Spotify\", \"status\": \"settled\", \"refund_effect\": \"Refunding this charge cancels the purchase.\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 42.5}}"
+    },
+    {
+      "role": "assistant",
+      "content": "You're eligible for a full refund of $42.50 for the Spotify charge. Please note that refunding this charge will cancel your purchase. Would you like me to proceed with the refund?"
+    },
+    {
+      "role": "user",
+      "content": "Yes, that's fine, go ahead."
     },
     {
       "role": "assistant",
       "content": null,
       "tool_calls": [
         {
-          "id": "call_91aQkpW5FYurbtHSmczxxPDa",
+          "id": "call_3fEgYw8ThOpZGJsS5LSeGgm4",
           "name": "issue_refund",
           "arguments": {
             "txn_id": "TXN-58214",
@@ -63,13 +71,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_91aQkpW5FYurbtHSmczxxPDa",
+      "tool_call_id": "call_3fEgYw8ThOpZGJsS5LSeGgm4",
       "name": "issue_refund",
       "content": "{\"ok\": true, \"refund_id\": \"R0001\"}"
     },
     {
       "role": "assistant",
-      "content": "Done, $42.50 is on its way back to you."
+      "content": "Done, $42.50 is on its way back to you. If you need anything else, just let me know!"
     }
   ],
   "tool_calls": [
@@ -95,6 +103,7 @@
         "date": "2026-10-01",
         "merchant": "Spotify",
         "status": "settled",
+        "refund_effect": "Refunding this charge cancels the purchase.",
         "refund_check": {
           "eligible_for_full_refund": true,
           "reason": "ok",

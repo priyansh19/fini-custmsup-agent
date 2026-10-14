@@ -12,6 +12,20 @@ CUMULATIVE_REFUND_CAP = 75.00       # Max agent-issued refunds per customer per 
 CUMULATIVE_REFUND_WINDOW_DAYS = 30  # Rolling window for cumulative cap
 
 
+def subscription_max_refund(t: dict, today: date = None) -> tuple[float, dict]:
+    """Proration (code): cancel on the day of the charge (day 0) = full refund; afterwards
+    refund only the unused days: amount * (period - days_used) / period, rounded to cents."""
+    from decimal import Decimal, ROUND_HALF_UP
+    today = today or TODAY
+    period = int(t.get("billing_period_days") or 30)
+    used = max(0, (today - date.fromisoformat(t.get("period_start") or t["date"])).days)
+    if used == 0:
+        return round(t["amount"], 2), {"days_used": 0, "period_days": period, "rule": "same_day_full_refund"}
+    unused = max(0, period - used)
+    amt = float((Decimal(str(t["amount"])) * unused / period).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+    return amt, {"days_used": used, "period_days": period, "unused_days": unused, "rule": "prorated_unused_days"}
+
+
 def refund_allowed(store: Store, session: dict, txn_id: str, amount: float) -> tuple[bool, str]:
     """Check if a refund can be auto-approved. Returns (allowed, reason)."""
     
@@ -46,6 +60,12 @@ def refund_allowed(store: Store, session: dict, txn_id: str, amount: float) -> t
     if amount > t["amount"]:
         return False, "amount_exceeds_transaction"
     
+    # 5b. Subscriptions: refund = cancellation; after day 0 only the prorated unused part
+    if t.get("kind") == "subscription":
+        max_amt, _ = subscription_max_refund(t)
+        if amount > round(max_amt - already_refunded, 2) + 1e-9:
+            return False, f"exceeds_prorated_max:{max(0, round(max_amt - already_refunded, 2))}"
+
     # 6. Transaction amount hard cap (POLICY: no refunds on txns > $75, not even partial)
     if t["amount"] > AUTO_LIMIT:
         return False, "over_auto_limit_escalate"

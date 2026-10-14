@@ -1,0 +1,152 @@
+{
+  "scenario": "22_same_day_cancel_full_refund",
+  "why": "PRORATION: Headspace billed today (day 0), so cancel = full $12.99 refund, after the cancellation notice and a yes.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "amara.okafor@maplecrest.test 6417. I signed up for Headspace by mistake this morning, TXN-58470. Please cancel and refund."
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_LXb1tOGalANaLnRpS03INay7",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "amara.okafor@maplecrest.test",
+            "last4": "6417"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_LXb1tOGalANaLnRpS03INay7",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_DzPkqh9M6TI6ubzm637r2v43",
+          "name": "get_transaction",
+          "arguments": {
+            "customer_id": "PL-48213",
+            "txn_id": "TXN-58470"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_DzPkqh9M6TI6ubzm637r2v43",
+      "name": "get_transaction",
+      "content": "{\"amount\": 12.99, \"date\": \"2026-10-11\", \"merchant\": \"Headspace\", \"status\": \"settled\", \"descriptor\": \"HEADSPACE.COM MONTHLY\", \"recurring\": true, \"kind\": \"subscription\", \"billing_period_days\": 30, \"period_start\": \"2026-10-11\", \"refund_effect\": \"Refunding this charge CANCELS the subscription; the customer loses access.\", \"refund_check\": {\"eligible_for_full_refund\": true, \"max_refund_now\": 12.99, \"proration\": {\"days_used\": 0, \"period_days\": 30, \"rule\": \"same_day_full_refund\"}, \"eligible_for_max_refund_now\": true, \"reason\": \"ok\"}}"
+    },
+    {
+      "role": "assistant",
+      "content": "You're eligible for a full refund of $12.99 for the Headspace subscription. Please note that refunding this charge will cancel the subscription, and you'll lose access. Would you like me to proceed with the refund?"
+    },
+    {
+      "role": "user",
+      "content": "Yes, cancel it."
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_6H0WmiYJuiIdgRPLlZc4CBey",
+          "name": "issue_refund",
+          "arguments": {
+            "txn_id": "TXN-58470",
+            "amount": 12.99,
+            "reason": "Cancelled subscription"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_6H0WmiYJuiIdgRPLlZc4CBey",
+      "name": "issue_refund",
+      "content": "{\"ok\": true, \"refund_id\": \"R0001\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "Done, $12.99 is on its way back to you, and the Headspace subscription has been canceled. If you need anything else, just let me know!"
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "amara.okafor@maplecrest.test",
+        "last4": "6417"
+      },
+      {
+        "verified": true,
+        "customer_id": "PL-48213"
+      }
+    ],
+    [
+      "get_transaction",
+      {
+        "customer_id": "PL-48213",
+        "txn_id": "TXN-58470"
+      },
+      {
+        "amount": 12.99,
+        "date": "2026-10-11",
+        "merchant": "Headspace",
+        "status": "settled",
+        "descriptor": "HEADSPACE.COM MONTHLY",
+        "recurring": true,
+        "kind": "subscription",
+        "billing_period_days": 30,
+        "period_start": "2026-10-11",
+        "refund_effect": "Refunding this charge CANCELS the subscription; the customer loses access.",
+        "refund_check": {
+          "eligible_for_full_refund": true,
+          "max_refund_now": 12.99,
+          "proration": {
+            "days_used": 0,
+            "period_days": 30,
+            "rule": "same_day_full_refund"
+          },
+          "eligible_for_max_refund_now": true,
+          "reason": "ok"
+        }
+      }
+    ],
+    [
+      "issue_refund",
+      {
+        "txn_id": "TXN-58470",
+        "amount": 12.99,
+        "reason": "Cancelled subscription"
+      },
+      {
+        "ok": true,
+        "refund_id": "R0001"
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "check": "refund issued for TXN-58470"
+    },
+    {
+      "pass": true,
+      "check": "not escalated"
+    },
+    {
+      "pass": true,
+      "check": "reply matches /(?i)cancel/"
+    }
+  ]
+}

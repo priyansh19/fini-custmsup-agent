@@ -173,6 +173,9 @@ export default function Home() {
               <li>Verify email + card last 4 first. 3 misses locks the chat.</li>
               <li>Auto-refund ≤ $75 and under 30 days. Partial refunds OK.</li>
               <li>Max $75 refunded in total per customer per 30 days.</li>
+              <li>Refund = cancellation: the agent states the consequence and needs a yes first.</li>
+              <li>Subscriptions: full refund on day 0, then prorated unused days.</li>
+              <li>Orders: delivery check first. In transit: wait. Delivered: proof or a specialist.</li>
               <li>Fraud, frozen cards, legal → a specialist follows up by email.</li>
             </ul>
             <div className={styles.links}><a href="/evals" target="_blank" rel="noreferrer">Eval results →</a><a href="https://github.com/priyansh19/fini-custmsup-agent" target="_blank" rel="noreferrer">GitHub →</a></div>

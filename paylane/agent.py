@@ -2,6 +2,7 @@
 import json, re
 from .data import Store, TODAY
 from .tools import TOOLS, TOOL_SPECS
+from .policy import subscription_max_refund
 from .policy import refund_allowed, check_verification
 from .prompt import SYSTEM_PROMPT
 
@@ -41,6 +42,11 @@ def normalize_txn_id(raw):
         return f"TXN-{m.group(1)}"
     bare = re.fullmatch(r'\s*#?(\d{5})\s*', str(raw))  # model sometimes passes just "58306"
     return f"TXN-{bare.group(1)}" if bare else str(raw).strip()
+
+
+AFFIRM_RE = re.compile(r"\b(yes|yeah|yep|yup|sure|ok(ay)?|confirm(ed)?|go ahead|proceed|do it|please do|that'?s fine|fine|understood|i understand|agreed?|correct|cancel it)\b", re.I)
+NEGATE_RE = re.compile(r"\b(no|nope|don'?t|do not|never ?mind|wait|stop|keep it|hold on|not yet)\b", re.I)
+PROOF_RE = re.compile(r"photo|picture|pic\b|screenshot|video|footage|camera|cctv|ring\b|doorbell|claim|police|report|neighbou?r|concierge|building|mail ?room|carrier|case (number|no|#)|reference|ref\b|statement from|witness", re.I)
 
 
 class Agent:
@@ -117,6 +123,60 @@ class Agent:
         asked.setdefault(txn_id, self.session.get("turn", 0))
         return {"ok": False, "reason": "ask_reason_first",
                 "instruction": "Ask the customer briefly what went wrong with this charge (so you can fix it if possible). Don't refund in this reply."}
+
+    def _touch(self, txn_id):
+        if txn_id:
+            tt = self.session.setdefault("turn_txns", {})
+            tt[txn_id] = self.session.get("turn", 0)
+
+    def _user_msgs_after(self, turn):
+        """User messages whose turn number is > turn (turn = 1-based count of user messages)."""
+        out, n = [], 0
+        for m in self.messages:
+            if m.get("role") == "user":
+                n += 1
+                if n > turn:
+                    out.append(str(m.get("content", "")))
+        return out
+
+    def _delivery_gate(self, txn_id):
+        """Orders (code): check_delivery_status first; no refund in transit; delivered needs a proof description."""
+        t = self.store.transactions.get(txn_id) or {}
+        if t.get("kind") != "order":
+            return None
+        chk = self.session.get("delivery_checked", {}).get(txn_id)
+        if not chk:
+            return {"ok": False, "reason": "check_delivery_status_first",
+                    "instruction": "Call check_delivery_status for this order first, then follow its next_step."}
+        when, status = chk
+        if status == "in_transit":
+            return {"ok": False, "reason": "order_in_transit_no_refund",
+                    "instruction": "The order is still on its way. Explain and offer to wait; if they insist, escalate_to_human."}
+        if status == "delivered":
+            if not any(PROOF_RE.search(u) for u in self._user_msgs_after(when)):
+                return {"ok": False, "reason": "need_proof_of_non_delivery",
+                        "instruction": "Carrier shows delivered. Ask the customer to describe proof it didn't arrive (carrier claim, photo, police/neighbour report). If they can't, escalate_to_human. Don't refund yet."}
+        return None
+
+    def _cancellation_gate(self, txn_id, amount):
+        """Refund = cancellation (code): the customer must be told the consequence in an earlier turn and say yes."""
+        t = self.store.transactions.get(txn_id) or {}
+        turn = self.session.get("turn", 0)
+        notice = self.session.setdefault("cancel_notice", {})
+        last_user = next((str(m.get("content", "")) for m in reversed(self.messages) if m.get("role") == "user"), "")
+        if txn_id in notice and notice[txn_id] < turn:
+            if AFFIRM_RE.search(last_user) and not NEGATE_RE.search(last_user):
+                return None
+            return {"ok": False, "reason": "awaiting_cancellation_confirmation",
+                    "instruction": "The customer hasn't clearly confirmed. Restate that refunding cancels it and ask for a clear yes. Don't refund."}
+        notice.setdefault(txn_id, turn)
+        kind = t.get("kind")
+        effect = ("cancel your " + t.get("merchant", "") + " subscription, so you'll lose access" if kind == "subscription"
+                  else "cancel the " + t.get("merchant", "") + " order, so it won't be delivered if it hasn't arrived" if kind == "order"
+                  else "cancel this " + t.get("merchant", "") + " purchase")
+        return {"ok": False, "reason": "confirm_cancellation_first",
+                "tell_customer": f"Refunding ${amount:.2f} will {effect}. Do you want me to go ahead?",
+                "instruction": "Tell the customer exactly this consequence and ask them to confirm. Refund only after they say yes in their next message."}
 
     def _resolution_gate(self, txn_id):
         """Resolution-first (code): for charges with a known non-refund fix (descriptor, auth hold,
@@ -199,6 +259,26 @@ class Agent:
                                **self._auto_escalate("unverified", "3 failed verification attempts; session locked.")}
                     else:
                         res = {"verified": False}
+        elif name == "check_delivery_status":
+            if not self.session.get("verified"):
+                res = {"error": "verify_customer_first"}
+            else:
+                tid = normalize_txn_id(args.get("txn_id", "")) if args.get("txn_id") else ""
+                res = TOOLS[name](self.store, customer_id=self.session["customer_id"], txn_id=tid, order_id=str(args.get("order_id") or ""))
+                if "status" in res:
+                    self.session.setdefault("delivery_checked", {})[res["txn_id"]] = [self.session.get("turn", 0), res["status"]]
+                    t = self.store.transactions[res["txn_id"]]
+                    left = round(t["amount"] - sum(r["amount"] for r in self.store.refunds.values() if r["txn_id"] == res["txn_id"]), 2)
+                    ok, why = refund_allowed(self.store, self.session, res["txn_id"], max(left, 0.01))
+                    res["order_charge"] = {"merchant": t["merchant"], "amount": t["amount"], "date": t["date"],
+                                           "refundable_remaining": max(left, 0), "policy_allows_refund": ok and not self.session.get("fraud_claim"), "policy_reason": why}
+                    self._touch(res["txn_id"])
+                    res["next_step"] = {
+                        "delivered": "Carrier shows it delivered. Ask the customer for proof it didn't arrive (carrier claim, photo, police/neighbour report, describe it). Once they describe proof and policy_allows_refund is true, do NOT escalate: tell them refunding cancels the order, get a yes, then issue_refund the full refundable_remaining. Only if they have no proof: escalate_to_human.",
+                        "in_transit": "Still on its way. Explain and offer to wait. No refund while in transit.",
+                        "not_shipped": "Not shipped yet. Offer to wait, or cancel the order + refund if the customer prefers (tell them refunding cancels the order and get a yes first).",
+                        "lost": "Carrier lost it. Offer a refund of refundable_remaining (tell them refunding cancels the order and get a yes first). Use the exact amount from order_charge.",
+                    }.get(res["status"], "")
         elif name == "get_customer":
             # SECURITY: no lookups before verification; only the verified customer's own record
             if not self.session.get("verified"):
@@ -227,6 +307,14 @@ class Agent:
                 ok, why = refund_allowed(self.store, self.session, args["txn_id"], max(left, 0.01))
                 if self.session.get("fraud_claim"): ok, why = False, "fraud_claim_escalate"
                 res["refund_check"] = {"eligible_for_full_refund": ok, "reason": why, "refundable_remaining": max(left, 0)}
+                if t.get("kind") == "subscription":
+                    mx, info = subscription_max_refund(t)
+                    mx = max(0, round(mx - (t["amount"] - left), 2))
+                    ok2, why2 = refund_allowed(self.store, self.session, args["txn_id"], max(mx, 0.01))
+                    res["refund_check"] = {"eligible_for_full_refund": False if info["days_used"] else ok,
+                                           "max_refund_now": mx, "proration": info,
+                                           "eligible_for_max_refund_now": ok2 and not self.session.get("fraud_claim"), "reason": why2}
+            self._touch(args["txn_id"])
             if "resolution" in res:
                 shown = self.session.setdefault("resolution_shown", {})
                 shown.setdefault(args["txn_id"], self.session.get("turn", 0))
@@ -243,7 +331,10 @@ class Agent:
                 try: float(args.get("amount", 0))
                 except (TypeError, ValueError): args = {**args, "amount": 0}
                 ok, reason = refund_allowed(self.store, self.session, args.get("txn_id"), float(args.get("amount", 0)))
-                gate = self._resolution_gate(args.get("txn_id")) or self._reason_gate(args.get("txn_id"), args)
+                tid = args.get("txn_id")
+                self._touch(tid)
+                gate = (self._resolution_gate(tid) or self._reason_gate(tid, args)
+                        or self._delivery_gate(tid) or self._cancellation_gate(tid, float(args.get("amount", 0))))
                 if ok and gate:
                     res = gate
                 else:
@@ -289,7 +380,14 @@ class Agent:
             if not calls:
                 text = sanitize_reply(out.get("text") or "")
                 self.messages[-1]["content"] = text
+                if re.search(r"cancel", text, re.I) and re.search(r"\?", text):
+                    turn = self.session.get("turn", 0)
+                    for tid, tn in self.session.get("turn_txns", {}).items():
+                        if tn == turn:
+                            self.session.setdefault("cancel_notice", {}).setdefault(tid, turn)
                 return text
+            # interim text that rides along with tool calls ("I'll process that now") is dropped: the final reply speaks
+            self.messages[-1]["content"] = None
             for c in calls:
                 res = self._run_tool(c["name"], c["arguments"])
                 self.messages.append({"role": "tool", "tool_call_id": c["id"], "name": c["name"], "content": json.dumps(res)})

@@ -30,13 +30,13 @@ _TRANSACTIONS = {
     "TXN-73325": {"customer_id": "PL-36642", "amount": 50.00,  "date": "2026-10-07", "merchant": "Lyft",         "status": "settled"},   # small fraud claim
     # --- resolution-first cases: the issue can usually be solved without a refund (see "resolution") ---
     "TXN-58420": {"customer_id": "PL-48213", "amount": 16.99, "date": "2026-10-09", "merchant": "Spotify",       "status": "settled",
-                  "descriptor": "SP*SPTFY FAMILY 8775881", "recurring": True,
+                  "descriptor": "SP*SPTFY FAMILY 8775881", "recurring": True, "kind": "subscription", "billing_period_days": 30, "period_start": "2026-10-09",
                   "resolution": "Statement descriptor 'SP*SPTFY FAMILY' is the customer's own Spotify Family plan (monthly renewal on the 9th). Explain the descriptor; it is not an unknown merchant."},
     "TXN-58433": {"customer_id": "PL-48213", "amount": 60.00, "date": "2026-10-10", "merchant": "Marriott Hotels", "status": "pending",
                   "descriptor": "MARRIOTT HOLD 4471", "kind": "authorization_hold",
                   "resolution": "Temporary authorization hold placed at hotel check-in. It is not a charge; it is released automatically when the hotel posts the final bill. No refund needed."},
     "TXN-58447": {"customer_id": "PL-48213", "amount": 13.99, "date": "2026-10-07", "merchant": "Disney+",        "status": "settled",
-                  "descriptor": "DISNEYPLUS 888-905-7888", "recurring": True,
+                  "descriptor": "DISNEYPLUS 888-905-7888", "recurring": True, "kind": "subscription", "billing_period_days": 30, "period_start": "2026-10-07",
                   "resolution": "Monthly subscription auto-renewal. To stop future charges the customer cancels in Disney+ > Account > Subscription > Cancel subscription. Offer that first; refund this renewal only if they still want it."},
     "TXN-58450": {"customer_id": "PL-48213", "amount": 28.40, "date": "2026-10-09", "merchant": "Uber Eats",      "status": "settled",
                   "descriptor": "UBER *EATS PENDING", "related_txn": "TXN-58451",
@@ -45,8 +45,33 @@ _TRANSACTIONS = {
                   "descriptor": "UBER *EATS PENDING", "kind": "authorization_hold", "related_txn": "TXN-58450",
                   "resolution": "Pending authorization for the same order as posted charge TXN-58450. It drops off automatically; it is not a second charge. No refund needed."},
     "TXN-58461": {"customer_id": "PL-48213", "amount": 48.00, "date": "2026-10-04", "merchant": "Allbirds",       "status": "settled",
-                  "descriptor": "ALLBIRDS.COM",
-                  "resolution": "Online order. If it hasn't arrived, first suggest checking the order's tracking link / contacting Allbirds. If the customer already tried and the order still hasn't arrived, a refund is appropriate (within policy)."},
+                  "descriptor": "ALLBIRDS.COM", "kind": "order", "order_id": "AB-771204"},
+}
+
+# --- subscriptions (refund = cancel; prorated after day 0) and orders (refund = cancel the order)
+_TRANSACTIONS.update({
+    "TXN-58470": {"customer_id": "PL-48213", "amount": 12.99, "date": "2026-10-11", "merchant": "Headspace", "status": "settled",
+                  "descriptor": "HEADSPACE.COM MONTHLY", "recurring": True, "kind": "subscription", "billing_period_days": 30, "period_start": "2026-10-11"},
+    "TXN-58475": {"customer_id": "PL-48213", "amount": 59.99, "date": "2026-09-26", "merchant": "Adobe Creative Cloud", "status": "settled",
+                  "descriptor": "ADOBE *CREATIVE CLD", "recurring": True, "kind": "subscription", "billing_period_days": 30, "period_start": "2026-09-26"},
+    "TXN-58480": {"customer_id": "PL-48213", "amount": 64.00, "date": "2026-10-08", "merchant": "IKEA", "status": "settled",
+                  "descriptor": "IKEA ONLINE", "kind": "order", "order_id": "IK-339018"},
+    "TXN-58485": {"customer_id": "PL-48213", "amount": 55.00, "date": "2026-09-29", "merchant": "Nike", "status": "settled",
+                  "descriptor": "NIKE.COM", "kind": "order", "order_id": "NK-582201"},
+    "TXN-58490": {"customer_id": "PL-48213", "amount": 22.00, "date": "2026-10-10", "merchant": "Etsy", "status": "settled",
+                  "descriptor": "ETSY.COM*CRAFTNEST", "kind": "order", "order_id": "ET-104577"},
+})
+
+# order_id -> delivery record (mock carrier data for check_delivery_status)
+_DELIVERIES = {
+    "AB-771204": {"txn_id": "TXN-58461", "status": "delivered", "carrier": "UPS", "tracking": "1Z84A6W70312345678",
+                  "delivered_at": "2026-10-08T14:12", "proof": "Left at front door, photo on file"},
+    "IK-339018": {"txn_id": "TXN-58480", "status": "in_transit", "carrier": "DHL", "tracking": "JD014600006281940127",
+                  "delivered_at": None, "proof": None, "eta": "2026-10-15"},
+    "NK-582201": {"txn_id": "TXN-58485", "status": "lost", "carrier": "FedEx", "tracking": "781234567890",
+                  "delivered_at": None, "proof": "Carrier marked the parcel lost in transit on 2026-10-06"},
+    "ET-104577": {"txn_id": "TXN-58490", "status": "not_shipped", "carrier": None, "tracking": None,
+                  "delivered_at": None, "proof": None},
 }
 
 
@@ -55,6 +80,7 @@ class Store:
     def __init__(self):
         self.customers = copy.deepcopy(_CUSTOMERS)
         self.transactions = copy.deepcopy(_TRANSACTIONS)
+        self.deliveries = copy.deepcopy(_DELIVERIES)
         self.refunds = {}   # refund_id -> {txn_id, amount}
         self.tickets = {}   # ticket_id -> {customer_id, summary}
         self.calls = []     # [(tool_name, args, result)]

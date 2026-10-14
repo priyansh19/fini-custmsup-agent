@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_RoBNVEe2AhvHozP8f00tqBUp",
+          "id": "call_JfI0hl9po7djvbRYBNEK95Y9",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_RoBNVEe2AhvHozP8f00tqBUp",
+      "tool_call_id": "call_JfI0hl9po7djvbRYBNEK95Y9",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_WxXmMeVerNVrQr0nKYKbJkO2",
+          "id": "call_VYWLc9THv1ubNN6yrRyJZzaM",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-48213",
@@ -42,13 +42,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_WxXmMeVerNVrQr0nKYKbJkO2",
+      "tool_call_id": "call_VYWLc9THv1ubNN6yrRyJZzaM",
       "name": "get_transaction",
-      "content": "{\"amount\": 13.99, \"date\": \"2026-10-07\", \"merchant\": \"Disney+\", \"status\": \"settled\", \"descriptor\": \"DISNEYPLUS 888-905-7888\", \"recurring\": true, \"resolution\": \"Monthly subscription auto-renewal. To stop future charges the customer cancels in Disney+ > Account > Subscription > Cancel subscription. Offer that first; refund this renewal only if they still want it.\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 13.99}, \"resolution_first\": \"Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows.\"}"
+      "content": "{\"amount\": 13.99, \"date\": \"2026-10-07\", \"merchant\": \"Disney+\", \"status\": \"settled\", \"descriptor\": \"DISNEYPLUS 888-905-7888\", \"recurring\": true, \"kind\": \"subscription\", \"resolution\": \"Monthly subscription auto-renewal. To stop future charges the customer cancels in Disney+ > Account > Subscription > Cancel subscription. Offer that first; refund this renewal only if they still want it.\", \"billing_period_days\": 30, \"period_start\": \"2026-10-07\", \"refund_effect\": \"Refunding this charge CANCELS the subscription; the customer loses access.\", \"refund_check\": {\"eligible_for_full_refund\": false, \"max_refund_now\": 12.12, \"proration\": {\"days_used\": 4, \"period_days\": 30, \"unused_days\": 26, \"rule\": \"prorated_unused_days\"}, \"eligible_for_max_refund_now\": true, \"reason\": \"ok\"}, \"resolution_first\": \"Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows.\"}"
     },
     {
       "role": "assistant",
-      "content": "The charge of $13.99 from Disney+ on October 7 was for your monthly subscription, which auto-renews. To stop future charges, you'll need to cancel your subscription directly in your Disney+ account under Account > Subscription > Cancel subscription. Does that help resolve your issue, or would you still like to proceed with a refund?"
+      "content": "The charge of $13.99 for Disney+ on October 7 was for your monthly subscription, which auto-renews. To stop future charges, you can cancel your subscription directly in your Disney+ account under \"Account > Subscription > Cancel subscription.\"\n\nIf you'd still like to proceed with a refund for this charge, I can offer a prorated refund of $12.12, which reflects the unused days of your billing period. However, please note that refunding this charge will cancel your subscription, and you will lose access to Disney+. Would you like to go ahead with the refund?"
     },
     {
       "role": "user",
@@ -56,7 +56,7 @@
     },
     {
       "role": "assistant",
-      "content": "Got it! Enjoy your Disney+ subscription this month. If you need any further assistance, just let me know!"
+      "content": "Got it! Enjoy your Disney+ subscription this month. If you need any further assistance, feel free to ask!"
     }
   ],
   "tool_calls": [
@@ -84,11 +84,22 @@
         "status": "settled",
         "descriptor": "DISNEYPLUS 888-905-7888",
         "recurring": true,
+        "kind": "subscription",
         "resolution": "Monthly subscription auto-renewal. To stop future charges the customer cancels in Disney+ > Account > Subscription > Cancel subscription. Offer that first; refund this renewal only if they still want it.",
+        "billing_period_days": 30,
+        "period_start": "2026-10-07",
+        "refund_effect": "Refunding this charge CANCELS the subscription; the customer loses access.",
         "refund_check": {
-          "eligible_for_full_refund": true,
-          "reason": "ok",
-          "refundable_remaining": 13.99
+          "eligible_for_full_refund": false,
+          "max_refund_now": 12.12,
+          "proration": {
+            "days_used": 4,
+            "period_days": 30,
+            "unused_days": 26,
+            "rule": "prorated_unused_days"
+          },
+          "eligible_for_max_refund_now": true,
+          "reason": "ok"
         },
         "resolution_first": "Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows."
       }

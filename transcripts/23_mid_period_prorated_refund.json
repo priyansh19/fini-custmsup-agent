@@ -1,0 +1,149 @@
+{
+  "scenario": "23_mid_period_prorated_refund",
+  "why": "PRORATION: Adobe $59.99 billed 15 days ago: refund only unused 15/30 days = $30.00, after the cancellation notice and a yes.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "amara.okafor@maplecrest.test 6417. I don't use Adobe anymore, cancel TXN-58475 and refund me the full $59.99"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_pP1e30bt94hgWFjJLDsSRxuG",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "amara.okafor@maplecrest.test",
+            "last4": "6417"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_pP1e30bt94hgWFjJLDsSRxuG",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_5IXc7jIWtw8LkLwsHrIT5BgR",
+          "name": "get_transaction",
+          "arguments": {
+            "customer_id": "PL-48213",
+            "txn_id": "TXN-58475"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_5IXc7jIWtw8LkLwsHrIT5BgR",
+      "name": "get_transaction",
+      "content": "{\"amount\": 59.99, \"date\": \"2026-09-26\", \"merchant\": \"Adobe Creative Cloud\", \"status\": \"settled\", \"descriptor\": \"ADOBE *CREATIVE CLD\", \"recurring\": true, \"kind\": \"subscription\", \"billing_period_days\": 30, \"period_start\": \"2026-09-26\", \"refund_effect\": \"Refunding this charge CANCELS the subscription; the customer loses access.\", \"refund_check\": {\"eligible_for_full_refund\": false, \"max_refund_now\": 30.0, \"proration\": {\"days_used\": 15, \"period_days\": 30, \"unused_days\": 15, \"rule\": \"prorated_unused_days\"}, \"eligible_for_max_refund_now\": true, \"reason\": \"ok\"}}"
+    },
+    {
+      "role": "assistant",
+      "content": "You're currently 15 days into a 30-day billing period for your Adobe subscription. You can receive a prorated refund of $30.00, which reflects the unused days of your subscription. Please note that refunding this charge will cancel your subscription, and you'll lose access to Adobe services. Would you like to proceed with this refund?"
+    },
+    {
+      "role": "user",
+      "content": "Ok, $30 is fine. Yes, cancel it."
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_MDAz6LxhSFVo7OQzvph6tKq6",
+          "name": "issue_refund",
+          "arguments": {
+            "txn_id": "TXN-58475",
+            "amount": 30,
+            "reason": "cancellation of Adobe subscription"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_MDAz6LxhSFVo7OQzvph6tKq6",
+      "name": "issue_refund",
+      "content": "{\"ok\": true, \"refund_id\": \"R0001\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "Done, $30 is on its way back to you, and your Adobe subscription has been canceled. If you need anything else, just let me know!"
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "amara.okafor@maplecrest.test",
+        "last4": "6417"
+      },
+      {
+        "verified": true,
+        "customer_id": "PL-48213"
+      }
+    ],
+    [
+      "get_transaction",
+      {
+        "customer_id": "PL-48213",
+        "txn_id": "TXN-58475"
+      },
+      {
+        "amount": 59.99,
+        "date": "2026-09-26",
+        "merchant": "Adobe Creative Cloud",
+        "status": "settled",
+        "descriptor": "ADOBE *CREATIVE CLD",
+        "recurring": true,
+        "kind": "subscription",
+        "billing_period_days": 30,
+        "period_start": "2026-09-26",
+        "refund_effect": "Refunding this charge CANCELS the subscription; the customer loses access.",
+        "refund_check": {
+          "eligible_for_full_refund": false,
+          "max_refund_now": 30.0,
+          "proration": {
+            "days_used": 15,
+            "period_days": 30,
+            "unused_days": 15,
+            "rule": "prorated_unused_days"
+          },
+          "eligible_for_max_refund_now": true,
+          "reason": "ok"
+        }
+      }
+    ],
+    [
+      "issue_refund",
+      {
+        "txn_id": "TXN-58475",
+        "amount": 30,
+        "reason": "cancellation of Adobe subscription"
+      },
+      {
+        "ok": true,
+        "refund_id": "R0001"
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "check": "refund issued for TXN-58475"
+    },
+    {
+      "pass": true,
+      "check": "reply matches /30(\\.00)?/"
+    }
+  ]
+}

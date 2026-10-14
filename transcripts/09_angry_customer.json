@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_a4sJDZGnriq4q2mu6zAo3nLA",
+          "id": "call_k8cFi15PCVtoygP6VQE7SIWI",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_a4sJDZGnriq4q2mu6zAo3nLA",
+      "tool_call_id": "call_k8cFi15PCVtoygP6VQE7SIWI",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_zEh9Jt7h3Q2eLlF1Sn0IBDum",
+          "id": "call_ZzxxO4rELB3TMBnA3ZhfvzL7",
           "name": "escalate_to_human",
           "arguments": {
             "customer_id": "PL-48213",
@@ -42,13 +42,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_zEh9Jt7h3Q2eLlF1Sn0IBDum",
+      "tool_call_id": "call_ZzxxO4rELB3TMBnA3ZhfvzL7",
       "name": "escalate_to_human",
       "content": "{\"ticket_id\": \"TK0001\"}"
     },
     {
       "role": "assistant",
-      "content": "A specialist will follow up by email regarding your charge from Zara."
+      "content": "A specialist will follow up by email regarding your concern about the $120 charge from Zara."
     },
     {
       "role": "user",

@@ -191,3 +191,13 @@ case("r03_subscription_cancel_help", "resolution", [A, "I forgot to cancel Disne
 case("r04_duplicate_pending_auth", "resolution", [A, "Uber Eats charged me twice, TXN-58450 and TXN-58451, refund the duplicate", "Ah ok, makes sense."], no_refunds, says(r"(?i)pending|authori[sz]ation|drop"))
 case("r05_resolve_fails_then_refund", "resolution", [A, "My Allbirds order TXN-58461 never arrived", "I checked tracking and emailed them twice, no reply. I want my money back."], refunded("TXN-58461"))
 case("r06_reason_asked_then_refund", "resolution", ["I want a refund", A, "TXN-58214", "I cancelled Spotify last month but they still charged me."], refunded("TXN-58214"))
+
+# ---------------- refund = cancellation, proration, delivery (Oct 14)
+case("c01_cancel_notice_then_refund", "cancellation", [A, "Refund TXN-58214, I cancelled Spotify but was still charged", "Yes, go ahead"], refunded("TXN-58214"))
+case("c02_no_yes_no_refund", "cancellation", [A, "Refund TXN-58214, I cancelled Spotify but was still charged"], no_refunds, says(r"(?i)cancel"))
+case("s01_same_day_full", "proration", [A, "I signed up for Headspace by mistake today, TXN-58470. Cancel and refund.", "Yes, cancel it."], refunded("TXN-58470", 12.99))
+case("s02_mid_month_prorated", "proration", [A, "I don't use Adobe anymore, cancel TXN-58475 and refund me the full amount", "Ok, yes, cancel it."], refunded("TXN-58475", 30.0))
+case("d01_delivered_proof_refund", "delivery", [A, "My Allbirds order TXN-58461 never arrived", "I filed a UPS claim (ref 55102) and my neighbour confirmed nothing was left.", "Yes, go ahead."], refunded("TXN-58461"))
+case("d02_delivered_no_proof", "delivery", [A, "My Allbirds order TXN-58461 never arrived, refund it", "I don't have any proof, I just never got it."], no_refunds, escalated)
+case("d03_in_transit", "delivery", [A, "My IKEA order TXN-58480 hasn't arrived, refund it", "Refund it anyway"], no_refunds)
+case("d04_lost", "delivery", [A, "My Nike order TXN-58485 never came", "Yes, cancel it and refund me."], refunded("TXN-58485"))

@@ -8,8 +8,12 @@ from paylane.data import Store
 V = {"verified": True, "customer_id": "PL-48213"}
 
 
-def run(script, *msgs):
+def run(script, *msgs, confirmed=()):
+    """confirmed: txns whose 'refund = cancellation' notice was already given (turn 0), so a
+    'yes, go ahead' message passes the cancellation gate. Lets policy tests focus on policy."""
     a = Agent(ScriptedProvider(script))
+    for t in confirmed:
+        a.session.setdefault("cancel_notice", {})[t] = 0
     for m in msgs: a.send(m)
     return a
 
@@ -29,13 +33,15 @@ def test_boundaries():
 def test_cumulative_exact_75_then_over():
     a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
              tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), tc(3, "issue_refund", txn_id="TXN-58277", amount=32.5),
-             tc(4, "issue_refund", txn_id="TXN-58209", amount=10), say("x")], "These were all billed after I cancelled")
+             tc(4, "issue_refund", txn_id="TXN-58209", amount=10), say("x")], "Yes go ahead, these were all billed after I cancelled",
+            confirmed=("TXN-58214", "TXN-58277", "TXN-58209"))
     assert len(ok_refunds(a)) == 2
 
 
 def test_single_75_uses_whole_rolling_allowance():
     a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
-             tc(2, "issue_refund", txn_id="TXN-58237", amount=75), tc(3, "issue_refund", txn_id="TXN-58219", amount=25), say("x")], "Driver never came and the Apple item arrived broken")
+             tc(2, "issue_refund", txn_id="TXN-58237", amount=75), tc(3, "issue_refund", txn_id="TXN-58219", amount=25), say("x")], "Yes go ahead: driver never came and the Apple item arrived broken",
+            confirmed=("TXN-58237", "TXN-58219"))
     assert [c[1]["txn_id"] for c in ok_refunds(a)] == ["TXN-58237"]
 
 
@@ -74,7 +80,7 @@ def test_sanitize_timeline():
 
 def test_state_roundtrip():
     a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
-             tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), say("x")], "hi")
+             tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), say("x")], "Yes go ahead, cancelled but billed", confirmed=("TXN-58214",))
     b = Agent(ScriptedProvider([tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5), say("y")]))
     b.load_state(a.to_state())
     b.send("again")
@@ -85,7 +91,8 @@ def test_ids_unique_after_state_rebuild():
     """Round-1 live bug: refund ids restarted per serverless instance and overwrote earlier refunds."""
     import paylane.tools as T
     a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
-             tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), tc(3, "issue_refund", txn_id="TXN-58277", amount=32.5), say("x")], "Both were billed after I cancelled")
+             tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), tc(3, "issue_refund", txn_id="TXN-58277", amount=32.5), say("x")], "Yes go ahead, both were billed after I cancelled",
+            confirmed=("TXN-58214", "TXN-58277"))
     st = a.to_state()
     T._ids = __import__("itertools").count(1)  # simulate a cold start
     b = Agent(ScriptedProvider([tc(5, "issue_refund", txn_id="TXN-58219", amount=25), say("y")]))
@@ -176,17 +183,28 @@ def test_resolution_first_blocks_refund_same_turn():
 
 def test_resolution_first_allows_refund_after_offer_next_turn():
     a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
-             tc(2, "get_transaction", customer_id="PL-48213", txn_id="TXN-58461"), say("Check tracking first?"),
-             tc(3, "issue_refund", txn_id="TXN-58461", amount=48, reason="not received"), say("Done")],
-            "My Allbirds order TXN-58461 never arrived", "Already tried, refund please")
+             tc(2, "get_transaction", customer_id="PL-48213", txn_id="TXN-58447"), say("Cancel in Disney+ settings?"),
+             tc(3, "issue_refund", txn_id="TXN-58447", amount=12.12, reason="forgot to cancel"), say("Refunding cancels it, ok?"),
+             tc(4, "issue_refund", txn_id="TXN-58447", amount=12.12, reason="forgot to cancel"), say("Done")],
+            "I forgot to cancel Disney+ TXN-58447", "I'd still like the refund", "Yes, go ahead")
     assert len(ok_refunds(a)) == 1
 
 
-def test_plain_eligible_refund_not_gated():
+def test_plain_eligible_refund_needs_cancellation_confirmation():
     a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
-             tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5, reason="cancelled but billed"), say("Done")],
-            "Refund TXN-58214, I cancelled Spotify but was billed")
+             tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5, reason="cancelled but billed"), say("This cancels it. Go ahead?"),
+             tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5, reason="cancelled but billed"), say("Done")],
+            "Refund TXN-58214, I cancelled Spotify but was billed", "Yes please")
     assert len(ok_refunds(a)) == 1
+    assert a.store.calls[1][2]["reason"] == "confirm_cancellation_first" and "tell_customer" in a.store.calls[1][2]
+
+
+def test_cancellation_gate_blocks_without_yes():
+    a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
+             tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), say("This cancels it. Go ahead?"),
+             tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5), say("ok")],
+            "Refund TXN-58214, I cancelled Spotify but was billed", "hmm, what does that mean for my playlists")
+    assert not ok_refunds(a)
 
 
 def test_get_transaction_exposes_resolution_context():
@@ -199,14 +217,72 @@ def test_reason_gate_asks_once_then_allows():
     # "TXN-58214" alone gives no reason: the first attempt is held so the agent asks what went wrong
     a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
              tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), say("What went wrong with it?"),
-             tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5), say("Done")],
-            "I want a refund. amara.okafor@maplecrest.test 6417 TXN-58214", "I cancelled Spotify but was still billed")
+             tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5), say("This cancels it, ok?"),
+             tc(4, "issue_refund", txn_id="TXN-58214", amount=42.5), say("Done")],
+            "I want a refund. amara.okafor@maplecrest.test 6417 TXN-58214", "I cancelled Spotify but was still billed", "yes")
     assert len(ok_refunds(a)) == 1 and a.store.calls[1][2]["reason"] == "ask_reason_first"
 
 
 def test_reason_gate_not_obstructive_if_customer_wont_say():
     a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
              tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), say("What went wrong?"),
-             tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5), say("Done")],
-            "refund TXN-58214 amara.okafor@maplecrest.test 6417", "just do it")
+             tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5), say("This cancels it, ok?"),
+             tc(4, "issue_refund", txn_id="TXN-58214", amount=42.5), say("Done")],
+            "refund TXN-58214 amara.okafor@maplecrest.test 6417", "just do it", "yes")
     assert len(ok_refunds(a)) == 1
+
+
+# ---- proration, delivery, cancellation (Oct 14)
+from paylane.policy import subscription_max_refund
+
+
+def test_proration_examples():
+    s = Store()
+    assert subscription_max_refund(s.transactions["TXN-58470"])[0] == 12.99    # day 0: full
+    assert subscription_max_refund(s.transactions["TXN-58475"])[0] == 30.00    # 59.99 * 15/30
+    assert subscription_max_refund(s.transactions["TXN-58447"])[0] == 12.12    # 13.99 * 26/30
+    assert refund_allowed(s, V, "TXN-58475", 59.99)[1].startswith("exceeds_prorated_max")
+    assert refund_allowed(s, V, "TXN-58475", 30.00)[0]
+
+
+def _order_run(txn, status_msgs, script_tail):
+    return run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
+                tc(2, "check_delivery_status", txn_id=txn)] + script_tail, *status_msgs)
+
+
+def test_delivered_requires_proof_then_refunds():
+    a = _order_run("TXN-58461", ["My Allbirds order TXN-58461 never arrived", "I don't know, it just isn't here",
+                                 "My neighbour checked her porch and I filed a UPS claim, ref 55102", "Yes, go ahead"],
+                   [tc(3, "issue_refund", txn_id="TXN-58461", amount=48), say("Carrier says delivered. Any proof?"),
+                    tc(4, "issue_refund", txn_id="TXN-58461", amount=48), say("Still need proof"),
+                    tc(5, "issue_refund", txn_id="TXN-58461", amount=48), say("Refunding cancels the order. OK?"),
+                    tc(6, "issue_refund", txn_id="TXN-58461", amount=48), say("Done")])
+    reasons = [c[2].get("reason") for c in a.store.calls if c[0] == "issue_refund"]
+    assert reasons[:3] == ["need_proof_of_non_delivery", "need_proof_of_non_delivery", "confirm_cancellation_first"]
+    assert len(ok_refunds(a)) == 1
+
+
+def test_in_transit_never_refunds():
+    a = _order_run("TXN-58480", ["Where is my IKEA order TXN-58480? It hasn't arrived, refund it", "yes refund it anyway"],
+                   [tc(3, "issue_refund", txn_id="TXN-58480", amount=64), say("It's in transit"),
+                    tc(4, "issue_refund", txn_id="TXN-58480", amount=64), say("Still in transit")])
+    assert not ok_refunds(a) and a.store.calls[-1][2]["reason"] == "order_in_transit_no_refund"
+
+
+def test_order_refund_requires_delivery_check():
+    a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
+             tc(2, "issue_refund", txn_id="TXN-58485", amount=55), say("x")], "My Nike order TXN-58485 never came, yes refund")
+    assert a.store.calls[-1][2]["reason"] == "check_delivery_status_first"
+
+
+def test_lost_order_refunds_after_confirmation():
+    a = _order_run("TXN-58485", ["My Nike order TXN-58485 never came", "Yes go ahead"],
+                   [tc(3, "issue_refund", txn_id="TXN-58485", amount=55), say("Lost; refunding cancels the order. OK?"),
+                    tc(4, "issue_refund", txn_id="TXN-58485", amount=55), say("Done")])
+    assert len(ok_refunds(a)) == 1
+
+
+def test_delivery_status_scoped_to_customer():
+    a = run([tc(1, "verify_customer", email="meilin.tan@maplecrest.test", last4="9126"),
+             tc(2, "check_delivery_status", txn_id="TXN-58461"), say("x")], "where's my order TXN-58461")
+    assert a.store.calls[1][2] == {"error": "no_delivery_record"}

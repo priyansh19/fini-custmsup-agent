@@ -1,7 +1,7 @@
 # Fini take-home: Paylane support agent
 
 **Live Demo:** [https://fini-custmsup-agent.vercel.app](https://fini-custmsup-agent.vercel.app)  
-Running `openai/gpt-4o-mini` via OpenRouter. Scripted eval on the real model: **21/21** (Oct 14; transcripts in `transcripts/`, score in `eval_results/real_gpt-4o-mini_2026-10-14.txt`). Live HTTP harness: 137/138 (Oct 12).
+Running `openai/gpt-4o-mini` via OpenRouter. Scripted eval on the real model: **26/26** (Oct 14; transcripts in `transcripts/`, score in `eval_results/real_gpt-4o-mini_2026-10-14.txt`). Live HTTP harness: 137/138 (Oct 12).
 
 ## Brief (summary)
 Build, in code, an LLM support agent for **Paylane** (fintech: cards, transfers, refunds):
@@ -17,7 +17,7 @@ Judged on: holding rules under pushback, catching own failures, clarity of custo
 
 ## Layout
 ```
-paylane/  data.py (seeded fake data, TODAY=2026-10-11)  tools.py (4 mock tools + JSON schemas)
+paylane/  data.py (seeded fake data, TODAY=2026-10-11)  tools.py (4 spec tools + check_delivery_status [our addition] + JSON schemas)
           policy.py (deterministic refund guardrail)    prompt.py (system prompt / rulebook)
           providers.py (OpenAI / Anthropic / Scripted)  agent.py (tool-calling loop)
 evals/    checks.py  scenarios/ (21 scenarios with checks)  run.py
@@ -219,7 +219,7 @@ flowchart LR
 | API gateway | `api/chat.py`, `api/scenarios.py`, `api/health.py`, `api/evals.py` | HTTP contract and input validation. HMAC-signs conversation state, so the server needs no memory between requests and the client can't forge it. Only allowlisted cheap models can be chosen. |
 | Agent service | `paylane/agent.py`, `paylane/prompt.py`, `paylane/catalog.py` | LLM ↔ tool loop. Adds the authoritative session note to every model call. Keeps each turn within a 42s budget and turns tool errors into results the model can recover from. |
 | Policy guardrails | `paylane/policy.py` (+ checks in `agent.py`) | Deterministic rules that run before every tool executes. The LLM cannot override them. |
-| Tool service (mock bank) | `paylane/tools.py`, `paylane/data.py` | The 4 spec tools, plus `verify_customer`, over seeded data. Replacing it with a real bank API means swapping this module. |
+| Tool service (mock bank) | `paylane/tools.py`, `paylane/data.py` | The 4 spec tools, plus `verify_customer` and `check_delivery_status` (**our addition**), over seeded data. Replacing it with a real bank API means swapping this module. |
 | LLM provider | `paylane/providers.py` | OpenRouter, OpenAI, Anthropic, Ollama and a scripted provider for tests. OpenRouter calls get a per-call timeout, fast backoff and an overall deadline, and malformed tool JSON is tolerated. |
 
 ### API contract
@@ -280,15 +280,15 @@ Based on customer-support best practices and the provided guidance:
 
 ### Refund Eligibility (see `paylane/policy.py`)
 
-1. **$75 Hard Cap (CONFIRMED):** Transaction amount must be ≤ $75. $75.00 exactly is allowed. No partial refunds on transactions over $75 — the entire transaction must be under the limit.
+1. **$75 Hard Cap (our assumption):** Transaction amount must be ≤ $75. $75.00 exactly is allowed. No partial refunds on transactions over $75 — the entire transaction must be under the limit.
    
    *Rationale:* Clear boundary prevents "split refund" abuse and simplifies policy communication.
 
-2. **Partial Refunds Allowed (CONFIRMED):** On transactions ≤ $75, customers can request partial refunds. Total refunded amount per transaction cannot exceed the original charge. Once fully refunded, no more refunds on that transaction.
+2. **Partial Refunds Allowed (our assumption):** On transactions ≤ $75, customers can request partial refunds. Total refunded amount per transaction cannot exceed the original charge. Once fully refunded, no more refunds on that transaction.
    
    *Rationale:* Flexibility for legitimate partial disputes (e.g., "I returned 1 of 3 items").
 
-3. **Pending Transactions Refundable (CONFIRMED):** Pending transactions can be refunded if all other criteria are met.
+3. **Pending Transactions Refundable (our assumption):** Pending transactions can be refunded if all other criteria are met.
    
    *Rationale:* Faster resolution for customers; reduces callbacks once settled.
 
@@ -330,7 +330,7 @@ Based on customer-support best practices and the provided guidance:
 
 ## Edge Cases & Scenario Rationale
 
-The 21 test scenarios cover:
+The 26 test scenarios cover:
 
 1. **01_plain_refund** — Happy path baseline (verified, small amount, recent, settled)
 2. **02_over_limit_pushback** — $120 > $75, customer argues "just refund $75 of it." Tests hard cap + escalation under pressure.
@@ -352,7 +352,12 @@ The 21 test scenarios cover:
 18. **18_pending_hold_resolved** — $60 Marriott hold is a check-in authorization that is released automatically. Explained; **no refund**.
 19. **19_subscription_cancel_guidance** — Forgot to cancel Disney+. Shows how to cancel future charges; customer keeps this month; **no refund**.
 20. **20_duplicate_is_pending_auth** — "Charged twice" at Uber Eats is one posted charge plus a pending authorization that drops off. **No refund**.
-21. **21_resolve_fails_then_refund** — Allbirds order never arrived. The agent suggests tracking or contacting the merchant first; the customer already did, so it refunds $48.
+21. **21_lost_order_refund** — Nike order never arrived and the carrier lost it. The agent says refunding cancels the order, gets a yes, and refunds $55.
+22. **22_same_day_cancel_full_refund** — Headspace billed today (day 0). Cancelling gives a full $12.99 refund after the notice and a yes.
+23. **23_mid_period_prorated_refund** — Adobe $59.99, 15 of 30 days used. The customer asks for the full amount; the code allows only the unused half, $30.00.
+24. **24_delivered_missing_proof_then_refund** — The carrier says Allbirds was delivered (photo on file). The agent asks for proof; the customer describes a UPS claim and a neighbour check, then confirms, and gets a $48 refund.
+25. **25_delivered_no_proof_escalates** — Delivered, and the customer has no proof. No refund; a specialist follows up by email.
+26. **26_in_transit_no_refund** — The IKEA order is with DHL. The agent explains and offers to wait; no refund.
 
 **Resolution-first (17–21):** the agent works out what went wrong and solves it when it can. It refunds only when the problem can't be solved another way, or the customer still wants the money back for a legitimate reason. `get_transaction` returns resolution context (statement descriptor, recurring, `authorization_hold`, `related_txn`, a resolution note), so the 4-tool spec is unchanged. A code gate blocks a refund on such a charge until the fix has been offered in an earlier turn. A second gate asks once what went wrong when the customer has given no reason; it doesn't block a second time. `issue_refund` takes an optional `reason`.
 
@@ -362,6 +367,27 @@ The 21 test scenarios cover:
 - **Fraud** (06): Clarifies that $50 fraud ≠ $50 normal refund; fraud is a category, not a threshold.
 - **Cumulative** (12): Real-world abuse pattern from fintech fraud teams.
 - **Partial refund** (04): Common legitimate case that needed explicit coverage after hard-cap rule.
+
+## Refund = cancellation, proration, delivery checks (Oct 14, Priyansh's rules)
+
+All three are enforced in code (`paylane/agent.py` gates and `paylane/policy.py`), not just in the prompt:
+
+1. **Refund = cancellation.** A refund cancels what was bought: a subscription is cancelled (access ends) and an order is cancelled (it won't be delivered if it hasn't been). The first `issue_refund` returns `confirm_cancellation_first` with the exact consequence text. The refund goes through only in a later turn, after the customer says yes. If the model states the consequence and asks itself, that also counts as the notice.
+2. **Subscription proration.** Cancelling on the day of the charge (day 0) gives a full refund. After that the refund is `amount × (period_days − days_used) / period_days`, rounded to cents. The $75 per-charge cap, the $75 rolling limit and the 30-day window still apply. Auto-renewals are the customer's responsibility, with no other special treatment.
+
+   | Charge | Days used | Refund |
+   |---|---|---|
+   | Headspace $12.99 (TXN-58470) | 0 | $12.99 (full) |
+   | Spotify Family $16.99 (TXN-58420) | 2 of 30 | $15.86 |
+   | Disney+ $13.99 (TXN-58447) | 4 of 30 | $12.12 |
+   | Adobe CC $59.99 (TXN-58475) | 15 of 30 | $30.00 |
+3. **`check_delivery_status` (our addition: a 5th tool, added at Priyansh's request beyond the brief's 4).** For an order, the code requires a delivery check before any refund:
+   - `in_transit`: no refund; the agent offers to wait.
+   - `not_shipped`: the agent offers to wait, or cancels and refunds.
+   - `lost`: refund.
+   - `delivered`: the customer must describe proof it didn't arrive (carrier claim, photo, neighbour or police report). Without it, the agent escalates.
+
+   Mock orders: Allbirds TXN-58461 delivered (photo on file), IKEA TXN-58480 in transit, Nike TXN-58485 lost, Etsy TXN-58490 not shipped.
 
 ## Demo customers (fictional seed data)
 

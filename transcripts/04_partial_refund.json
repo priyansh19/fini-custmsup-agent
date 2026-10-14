@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_KvErio9R7dlsB6XKQZjXHmZI",
+          "id": "call_nTWFmzFLmFh1ikS5trDyarCm",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_KvErio9R7dlsB6XKQZjXHmZI",
+      "tool_call_id": "call_nTWFmzFLmFh1ikS5trDyarCm",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_FPJAXKL5X1nC5Y839qRDX8T3",
+          "id": "call_OrnxgdaZC9V2MMJywFpWPYOh",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-48213",
@@ -42,28 +42,36 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_FPJAXKL5X1nC5Y839qRDX8T3",
+      "tool_call_id": "call_OrnxgdaZC9V2MMJywFpWPYOh",
       "name": "get_transaction",
-      "content": "{\"amount\": 25.0, \"date\": \"2026-10-02\", \"merchant\": \"Apple\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 25.0}}"
+      "content": "{\"amount\": 25.0, \"date\": \"2026-10-02\", \"merchant\": \"Apple\", \"status\": \"settled\", \"refund_effect\": \"Refunding this charge cancels the purchase.\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 25.0}}"
+    },
+    {
+      "role": "assistant",
+      "content": "The charge of $25.00 from Apple is eligible for a full refund. However, please note that refunding this charge will cancel the purchase entirely. Would you like to proceed with the refund of $15.00?"
+    },
+    {
+      "role": "user",
+      "content": "Yes, go ahead."
     },
     {
       "role": "assistant",
       "content": null,
       "tool_calls": [
         {
-          "id": "call_jP4Y81ayEaVz8K4EtBr4TPPF",
+          "id": "call_N1GzMUjTcrvGYPYiDi0IYrG7",
           "name": "issue_refund",
           "arguments": {
             "txn_id": "TXN-58219",
             "amount": 15,
-            "reason": "missing item from order"
+            "reason": "Missing item from order"
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "call_jP4Y81ayEaVz8K4EtBr4TPPF",
+      "tool_call_id": "call_N1GzMUjTcrvGYPYiDi0IYrG7",
       "name": "issue_refund",
       "content": "{\"ok\": true, \"refund_id\": \"R0001\"}"
     },
@@ -95,6 +103,7 @@
         "date": "2026-10-02",
         "merchant": "Apple",
         "status": "settled",
+        "refund_effect": "Refunding this charge cancels the purchase.",
         "refund_check": {
           "eligible_for_full_refund": true,
           "reason": "ok",
@@ -107,7 +116,7 @@
       {
         "txn_id": "TXN-58219",
         "amount": 15,
-        "reason": "missing item from order"
+        "reason": "Missing item from order"
       },
       {
         "ok": true,

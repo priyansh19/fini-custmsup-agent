@@ -36,8 +36,31 @@ def get_transaction(store: Store, customer_id: str, txn_id: str) -> dict:
     out = {k: t[k] for k in ("amount", "date", "merchant", "status")}
     # Resolution context (statement descriptor, holds, subscriptions, linked txns) so the
     # agent can solve the issue in chat before reaching for a refund.
-    out.update({k: t[k] for k in ("descriptor", "recurring", "kind", "related_txn", "resolution") if k in t})
+    out.update({k: t[k] for k in ("descriptor", "recurring", "kind", "related_txn", "resolution",
+                                  "billing_period_days", "period_start", "order_id") if k in t})
+    if t.get("kind") == "subscription":
+        out["refund_effect"] = "Refunding this charge CANCELS the subscription; the customer loses access."
+    elif t.get("kind") == "order":
+        out["refund_effect"] = "Refunding this charge CANCELS the order (it won't be delivered if not delivered yet). Call check_delivery_status first."
+    else:
+        out["refund_effect"] = "Refunding this charge cancels the purchase."
     return out
+
+
+def check_delivery_status(store: Store, customer_id: str, txn_id: str = "", order_id: str = "") -> dict:
+    """Our addition (5th tool, at Priyansh's request): mock carrier lookup for an order."""
+    rec = None
+    if order_id:
+        rec = store.deliveries.get(str(order_id).strip().upper())
+    if rec is None and txn_id:
+        rec = next((d for d in store.deliveries.values() if d["txn_id"] == txn_id), None)
+    if rec is None:
+        return {"error": "no_delivery_record"}
+    t = store.transactions.get(rec["txn_id"]) or {}
+    if t.get("customer_id") != customer_id:
+        return {"error": "no_delivery_record"}
+    oid = next(k for k, v in store.deliveries.items() if v is rec)
+    return {"order_id": oid, "txn_id": rec["txn_id"], **{k: v for k, v in rec.items() if k != "txn_id"}}
 
 
 def issue_refund(store: Store, txn_id: str, amount: float, reason: str = "") -> dict:
@@ -75,10 +98,12 @@ def escalate_to_human(store: Store, customer_id: str, summary: str) -> dict:
     return {"ticket_id": tid}
 
 
-TOOLS = {f.__name__: f for f in (get_customer, get_transaction, issue_refund, escalate_to_human)}
+TOOLS = {f.__name__: f for f in (get_customer, get_transaction, issue_refund, escalate_to_human, check_delivery_status)}
 
 # JSON-schema tool specs (OpenAI "function" / Anthropic "input_schema" compatible)
 TOOL_SPECS = [
+    {"name": "check_delivery_status", "description": "Our addition: carrier status for an order (by txn_id or order_id). Call it FIRST whenever a customer says an order didn't arrive. Returns status delivered|in_transit|lost|not_shipped, carrier, tracking, delivered_at, proof.",
+     "parameters": {"type": "object", "properties": {"txn_id": {"type": "string"}, "order_id": {"type": "string"}}}},
     {"name": "get_customer", "description": "Look up a customer by email. Returns card_last4 for verification; never reveal it.",
      "parameters": {"type": "object", "properties": {"email": {"type": "string"}}, "required": ["email"]}},
     {"name": "get_transaction", "description": "Fetch one transaction for a customer. May include descriptor, recurring, kind (e.g. authorization_hold), related_txn and a resolution note: use these to solve the customer's issue before considering a refund.",

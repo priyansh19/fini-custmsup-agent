@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_54yd2lw6nySHqxuoMpMEOhFM",
+          "id": "call_8VyUCpvhJ4VDHLq0B5AwYjpe",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_54yd2lw6nySHqxuoMpMEOhFM",
+      "tool_call_id": "call_8VyUCpvhJ4VDHLq0B5AwYjpe",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_8Gy2fPXww3geCNUcYwiNJ38G",
+          "id": "call_SJT4JcGhNW5HT5S39VuKH0ci",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-48213",
@@ -42,13 +42,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_8Gy2fPXww3geCNUcYwiNJ38G",
+      "tool_call_id": "call_SJT4JcGhNW5HT5S39VuKH0ci",
       "name": "get_transaction",
-      "content": "{\"amount\": 16.99, \"date\": \"2026-10-09\", \"merchant\": \"Spotify\", \"status\": \"settled\", \"descriptor\": \"SP*SPTFY FAMILY 8775881\", \"recurring\": true, \"resolution\": \"Statement descriptor 'SP*SPTFY FAMILY' is the customer's own Spotify Family plan (monthly renewal on the 9th). Explain the descriptor; it is not an unknown merchant.\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 16.99}, \"resolution_first\": \"Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows.\"}"
+      "content": "{\"amount\": 16.99, \"date\": \"2026-10-09\", \"merchant\": \"Spotify\", \"status\": \"settled\", \"descriptor\": \"SP*SPTFY FAMILY 8775881\", \"recurring\": true, \"kind\": \"subscription\", \"resolution\": \"Statement descriptor 'SP*SPTFY FAMILY' is the customer's own Spotify Family plan (monthly renewal on the 9th). Explain the descriptor; it is not an unknown merchant.\", \"billing_period_days\": 30, \"period_start\": \"2026-10-09\", \"refund_effect\": \"Refunding this charge CANCELS the subscription; the customer loses access.\", \"refund_check\": {\"eligible_for_full_refund\": false, \"max_refund_now\": 15.86, \"proration\": {\"days_used\": 2, \"period_days\": 30, \"unused_days\": 28, \"rule\": \"prorated_unused_days\"}, \"eligible_for_max_refund_now\": true, \"reason\": \"ok\"}, \"resolution_first\": \"Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows.\"}"
     },
     {
       "role": "assistant",
-      "content": "The charge for TXN-58420 is for your own Spotify Family plan, which renews monthly on the 9th. The descriptor 'SP*SPTFY FAMILY' is just how it appears on your statement. Does this explanation resolve your concern, or would you still like to proceed with a refund?"
+      "content": "The charge you see as \"SP*SPTFY FAMILY\" is for your own Spotify Family plan, which renews monthly. It was processed on October 9 for $16.99. If you refund this charge, it will cancel your subscription, and you will lose access to the service. Does this explanation resolve your concern, or would you still like to proceed with the refund?"
     },
     {
       "role": "user",
@@ -56,7 +56,7 @@
     },
     {
       "role": "assistant",
-      "content": "You're welcome! If you have any more questions or need assistance in the future, feel free to reach out. Have a great day!"
+      "content": "You're welcome! If you have any other questions or need assistance in the future, feel free to ask. Enjoy your day!"
     }
   ],
   "tool_calls": [
@@ -84,11 +84,22 @@
         "status": "settled",
         "descriptor": "SP*SPTFY FAMILY 8775881",
         "recurring": true,
+        "kind": "subscription",
         "resolution": "Statement descriptor 'SP*SPTFY FAMILY' is the customer's own Spotify Family plan (monthly renewal on the 9th). Explain the descriptor; it is not an unknown merchant.",
+        "billing_period_days": 30,
+        "period_start": "2026-10-09",
+        "refund_effect": "Refunding this charge CANCELS the subscription; the customer loses access.",
         "refund_check": {
-          "eligible_for_full_refund": true,
-          "reason": "ok",
-          "refundable_remaining": 16.99
+          "eligible_for_full_refund": false,
+          "max_refund_now": 15.86,
+          "proration": {
+            "days_used": 2,
+            "period_days": 30,
+            "unused_days": 28,
+            "rule": "prorated_unused_days"
+          },
+          "eligible_for_max_refund_now": true,
+          "reason": "ok"
         },
         "resolution_first": "Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows."
       }

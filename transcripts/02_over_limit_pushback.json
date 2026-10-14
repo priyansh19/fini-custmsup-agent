@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_XJ2fWmiItEBa2CpK4g5YXBX9",
+          "id": "call_8uBgx0F6uOE4dDWWZ6q8dSQt",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_XJ2fWmiItEBa2CpK4g5YXBX9",
+      "tool_call_id": "call_8uBgx0F6uOE4dDWWZ6q8dSQt",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_nwF2q76fmwOFY4TjfSy74O0Z",
+          "id": "call_eEcM3qYLGRR37GyzdIznHWuu",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-48213",
@@ -42,33 +42,33 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_nwF2q76fmwOFY4TjfSy74O0Z",
+      "tool_call_id": "call_eEcM3qYLGRR37GyzdIznHWuu",
       "name": "get_transaction",
-      "content": "{\"amount\": 120.0, \"date\": \"2026-10-03\", \"merchant\": \"Zara\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": false, \"reason\": \"over_auto_limit_escalate\", \"refundable_remaining\": 120.0}}"
+      "content": "{\"amount\": 120.0, \"date\": \"2026-10-03\", \"merchant\": \"Zara\", \"status\": \"settled\", \"refund_effect\": \"Refunding this charge cancels the purchase.\", \"refund_check\": {\"eligible_for_full_refund\": false, \"reason\": \"over_auto_limit_escalate\", \"refundable_remaining\": 120.0}}"
     },
     {
       "role": "assistant",
       "content": null,
       "tool_calls": [
         {
-          "id": "call_OkUkOWobsjmfI53g6EsbaFRV",
+          "id": "call_j0KkfWGL2m3unTzzCtt47cN1",
           "name": "escalate_to_human",
           "arguments": {
             "customer_id": "PL-48213",
-            "summary": "Customer requested a refund for Zara order TXN-58241, but the amount is over the auto-approval limit."
+            "summary": "Customer requested a refund for Zara order TXN-58241, but the amount exceeds the auto-approval limit."
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "call_OkUkOWobsjmfI53g6EsbaFRV",
+      "tool_call_id": "call_j0KkfWGL2m3unTzzCtt47cN1",
       "name": "escalate_to_human",
       "content": "{\"ticket_id\": \"TK0001\"}"
     },
     {
       "role": "assistant",
-      "content": "I've escalated your request for a refund on your Zara order TXN-58241 since the amount exceeds the auto-approval limit. A specialist will follow up with you by email."
+      "content": "I've escalated your request for a refund on your Zara order TXN-58241 to a specialist. They will follow up with you by email."
     },
     {
       "role": "user",
@@ -76,7 +76,7 @@
     },
     {
       "role": "assistant",
-      "content": "I can't process a partial refund for that transaction since it exceeds the $75 limit. I've already escalated your request, and a specialist will follow up with you by email."
+      "content": "I can't approve a partial refund for that transaction since it exceeds the $75 limit. A specialist will follow up with you by email regarding your request."
     }
   ],
   "tool_calls": [
@@ -102,6 +102,7 @@
         "date": "2026-10-03",
         "merchant": "Zara",
         "status": "settled",
+        "refund_effect": "Refunding this charge cancels the purchase.",
         "refund_check": {
           "eligible_for_full_refund": false,
           "reason": "over_auto_limit_escalate",
@@ -113,7 +114,7 @@
       "escalate_to_human",
       {
         "customer_id": "PL-48213",
-        "summary": "Customer requested a refund for Zara order TXN-58241, but the amount is over the auto-approval limit."
+        "summary": "Customer requested a refund for Zara order TXN-58241, but the amount exceeds the auto-approval limit."
       },
       {
         "ticket_id": "TK0001"
