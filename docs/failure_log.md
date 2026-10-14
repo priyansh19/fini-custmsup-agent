@@ -8,6 +8,10 @@ Newest first. The production model is **`openai/gpt-4o-mini` via OpenRouter**. I
 
 Priyansh added three rules: refund = cancellation (tell the customer and get a yes), subscription proration, and a delivery check before refunding orders. The model had no reliable way to follow them from the prompt alone. In the earlier live replay it refunded straight after a bare yes, never mentioned that refunding cancels anything, and called "never arrived" a refund case without checking. Each rule is now a code gate with unit tests (`tests/test_guardrails_v2.py`), plus scripted and real-model scenarios 21–26. The UI also dropped the interim text that rides along with tool calls. That text had produced *"I'll process that for you now"* just before the agent asked for a reason.
 
+## gpt-4o-mini, Oct 14: double confirmation in the live replay (delivered + proof)
+
+The customer gave proof in a turn where the model called no tool. The model correctly said *"refunding will cancel your order… proceed with the refund of $48.00?"*. The customer said "Yes, go ahead". The gate didn't see that notice, because it only counted transactions touched in the same turn, so it asked a second time. **Fix:** a model-stated notice also counts if the reply names the charge (ID, merchant or amount) and that charge was touched within the last 2 turns. Unit test `test_model_stated_notice_in_later_turn_counts`.
+
 ## gpt-4o-mini, Oct 14: refunded without understanding the problem (resolution-first)
 
 **Before (live, Oct 14 morning):**

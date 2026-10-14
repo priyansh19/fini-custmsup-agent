@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_opmOoF0qCjtBnDog7T27mIpo",
+          "id": "call_lY78BlTlNErssQiKGlzV7Oxj",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_opmOoF0qCjtBnDog7T27mIpo",
+      "tool_call_id": "call_lY78BlTlNErssQiKGlzV7Oxj",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_7QUEVnr6QLkNpTscATpuIoGJ",
+          "id": "call_wCXK2bIRlhQae3UcvB97yirK",
           "name": "check_delivery_status",
           "arguments": {
             "txn_id": "TXN-58485"
@@ -41,7 +41,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_7QUEVnr6QLkNpTscATpuIoGJ",
+      "tool_call_id": "call_wCXK2bIRlhQae3UcvB97yirK",
       "name": "check_delivery_status",
       "content": "{\"order_id\": \"NK-582201\", \"txn_id\": \"TXN-58485\", \"status\": \"lost\", \"carrier\": \"FedEx\", \"tracking\": \"781234567890\", \"delivered_at\": null, \"proof\": \"Carrier marked the parcel lost in transit on 2026-10-06\", \"order_charge\": {\"merchant\": \"Nike\", \"amount\": 55.0, \"date\": \"2026-09-29\", \"refundable_remaining\": 55.0, \"policy_allows_refund\": true, \"policy_reason\": \"ok\"}, \"next_step\": \"Carrier lost it. Offer a refund of refundable_remaining (tell them refunding cancels the order and get a yes first). Use the exact amount from order_charge.\"}"
     },
@@ -58,7 +58,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_iPD7S3chKIke53FIDAk0Tvh5",
+          "id": "call_VF8BXNJn9Xp6Crz4jqg3oTdt",
           "name": "issue_refund",
           "arguments": {
             "txn_id": "TXN-58485",
@@ -70,13 +70,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_iPD7S3chKIke53FIDAk0Tvh5",
+      "tool_call_id": "call_VF8BXNJn9Xp6Crz4jqg3oTdt",
       "name": "issue_refund",
       "content": "{\"ok\": true, \"refund_id\": \"R0001\"}"
     },
     {
       "role": "assistant",
-      "content": "Done, $55.00 is on its way back to you. Your order has been canceled. If you need anything else, just let me know!"
+      "content": "Done, $55.00 is on its way back to you, and the order has been canceled. If you need anything else, just let me know!"
     }
   ],
   "tool_calls": [
