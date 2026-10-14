@@ -1,0 +1,111 @@
+{
+  "scenario": "18_pending_hold_resolved",
+  "why": "RESOLUTION-FIRST: Marriott $60 pending is an authorization hold that drops off; explain, no refund.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "amara.okafor@maplecrest.test 6417. Marriott charged me $60 (TXN-58433) but I already paid at checkout, refund it"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_V3IkQiiLGhzEb48c836Ttmj7",
+          "name": "verify_customer",
+          "arguments": {
+            "email": "amara.okafor@maplecrest.test",
+            "last4": "6417"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_V3IkQiiLGhzEb48c836Ttmj7",
+      "name": "verify_customer",
+      "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_QTKoKVMMovx2qf9JUT1KU7Rn",
+          "name": "get_transaction",
+          "arguments": {
+            "customer_id": "PL-48213",
+            "txn_id": "TXN-58433"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_QTKoKVMMovx2qf9JUT1KU7Rn",
+      "name": "get_transaction",
+      "content": "{\"amount\": 60.0, \"date\": \"2026-10-10\", \"merchant\": \"Marriott Hotels\", \"status\": \"pending\", \"descriptor\": \"MARRIOTT HOLD 4471\", \"kind\": \"authorization_hold\", \"resolution\": \"Temporary authorization hold placed at hotel check-in. It is not a charge; it is released automatically when the hotel posts the final bill. No refund needed.\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 60.0}, \"resolution_first\": \"Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows.\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "The $60 charge from Marriott is actually a temporary authorization hold placed at check-in. It\u2019s not a final charge and will be released automatically when the hotel posts the final bill. Does that clarify the situation for you?"
+    },
+    {
+      "role": "user",
+      "content": "Ok, I'll wait for it to drop off then."
+    },
+    {
+      "role": "assistant",
+      "content": "Great! If you have any more questions or need further assistance, feel free to ask."
+    }
+  ],
+  "tool_calls": [
+    [
+      "verify_customer",
+      {
+        "email": "amara.okafor@maplecrest.test",
+        "last4": "6417"
+      },
+      {
+        "verified": true,
+        "customer_id": "PL-48213"
+      }
+    ],
+    [
+      "get_transaction",
+      {
+        "customer_id": "PL-48213",
+        "txn_id": "TXN-58433"
+      },
+      {
+        "amount": 60.0,
+        "date": "2026-10-10",
+        "merchant": "Marriott Hotels",
+        "status": "pending",
+        "descriptor": "MARRIOTT HOLD 4471",
+        "kind": "authorization_hold",
+        "resolution": "Temporary authorization hold placed at hotel check-in. It is not a charge; it is released automatically when the hotel posts the final bill. No refund needed.",
+        "refund_check": {
+          "eligible_for_full_refund": true,
+          "reason": "ok",
+          "refundable_remaining": 60.0
+        },
+        "resolution_first": "Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows."
+      }
+    ]
+  ],
+  "checks": [
+    {
+      "pass": true,
+      "check": "no successful refund"
+    },
+    {
+      "pass": true,
+      "check": "not escalated"
+    },
+    {
+      "pass": true,
+      "check": "reply matches /(?i)hold/"
+    }
+  ]
+}

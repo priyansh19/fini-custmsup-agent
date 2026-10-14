@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c1",
+          "id": "call_9nvwCGOW0i6HYZhtOJOnwPMa",
           "name": "verify_customer",
           "arguments": {
             "email": "mateo.alvarez@maplecrest.test",
@@ -22,32 +22,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c1",
+      "tool_call_id": "call_9nvwCGOW0i6HYZhtOJOnwPMa",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-51907\", \"card_status\": \"frozen\", \"freeze_reason\": \"Unusual login from a new country\", \"escalation\": \"created_automatically\", \"ticket_id\": \"TK0001\", \"tell_customer\": \"A specialist will follow up by email.\"}"
     },
     {
       "role": "assistant",
-      "content": null,
-      "tool_calls": [
-        {
-          "id": "c2",
-          "name": "get_customer",
-          "arguments": {
-            "email": "mateo.alvarez@maplecrest.test"
-          }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "tool_call_id": "c2",
-      "name": "get_customer",
-      "content": "{\"id\": \"PL-51907\", \"name\": \"Mateo Alvarez\", \"status\": \"frozen\", \"verified\": false, \"freeze_reason\": \"Unusual login from a new country\"}"
-    },
-    {
-      "role": "assistant",
-      "content": "It was frozen after a login from a new country. I can't unfreeze it."
+      "content": "Your card is frozen due to \"unusual login from a new country.\" I can't unfreeze it, but a specialist will follow up by email to assist you further."
     },
     {
       "role": "user",
@@ -58,24 +39,44 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c3",
-          "name": "escalate_to_human",
+          "id": "call_jLw4wp7ntjag05XINxsVHedc",
+          "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-51907",
-            "summary": "Frozen card, refund request TXN-61450 - needs human review"
+            "txn_id": "TXN-61450"
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "c3",
+      "tool_call_id": "call_jLw4wp7ntjag05XINxsVHedc",
+      "name": "get_transaction",
+      "content": "{\"amount\": 60.0, \"date\": \"2026-10-04\", \"merchant\": \"Steam\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": false, \"reason\": \"frozen_card_escalate\", \"refundable_remaining\": 60.0}}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_uD1q54FiFiqk920b303hVuHb",
+          "name": "escalate_to_human",
+          "arguments": {
+            "customer_id": "PL-51907",
+            "summary": "Customer requested a refund for Steam purchase TXN-61450, but the card is frozen."
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_uD1q54FiFiqk920b303hVuHb",
       "name": "escalate_to_human",
       "content": "{\"ticket_id\": \"TK0002\"}"
     },
     {
       "role": "assistant",
-      "content": "I can't refund while the card is frozen, but a specialist will follow up by email."
+      "content": "I can't process the refund for your Steam purchase because your card is frozen. I've escalated this to a specialist, and they will follow up with you by email."
     }
   ],
   "tool_calls": [
@@ -107,23 +108,28 @@
       }
     ],
     [
-      "get_customer",
+      "get_transaction",
       {
-        "email": "mateo.alvarez@maplecrest.test"
+        "customer_id": "PL-51907",
+        "txn_id": "TXN-61450"
       },
       {
-        "id": "PL-51907",
-        "name": "Mateo Alvarez",
-        "status": "frozen",
-        "verified": false,
-        "freeze_reason": "Unusual login from a new country"
+        "amount": 60.0,
+        "date": "2026-10-04",
+        "merchant": "Steam",
+        "status": "settled",
+        "refund_check": {
+          "eligible_for_full_refund": false,
+          "reason": "frozen_card_escalate",
+          "refundable_remaining": 60.0
+        }
       }
     ],
     [
       "escalate_to_human",
       {
         "customer_id": "PL-51907",
-        "summary": "Frozen card, refund request TXN-61450 - needs human review"
+        "summary": "Customer requested a refund for Steam purchase TXN-61450, but the card is frozen."
       },
       {
         "ticket_id": "TK0002"

@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c1",
+          "id": "call_nrOrdCop6rw3wRYMxmMEQphR",
           "name": "verify_customer",
           "arguments": {
             "email": "meilin.tan@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c1",
+      "tool_call_id": "call_nrOrdCop6rw3wRYMxmMEQphR",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-36642\"}"
     },
@@ -31,24 +31,24 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c2",
+          "id": "call_eOqGX5F87FVo2PqzwojG5GMK",
           "name": "escalate_to_human",
           "arguments": {
             "customer_id": "PL-36642",
-            "summary": "Fraud claim: unauthorized TXN-73325 $50 Lyft"
+            "summary": "Customer claims a $50 Lyft charge (TXN-73325) is fraudulent and that their card was stolen."
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "c2",
+      "tool_call_id": "call_eOqGX5F87FVo2PqzwojG5GMK",
       "name": "escalate_to_human",
       "content": "{\"ticket_id\": \"TK0001\"}"
     },
     {
       "role": "assistant",
-      "content": "I've escalated this fraud claim to our team right away."
+      "content": "A specialist will follow up by email regarding the fraudulent charge on your account."
     }
   ],
   "tool_calls": [
@@ -67,7 +67,7 @@
       "escalate_to_human",
       {
         "customer_id": "PL-36642",
-        "summary": "Fraud claim: unauthorized TXN-73325 $50 Lyft"
+        "summary": "Customer claims a $50 Lyft charge (TXN-73325) is fraudulent and that their card was stolen."
       },
       {
         "ticket_id": "TK0001"

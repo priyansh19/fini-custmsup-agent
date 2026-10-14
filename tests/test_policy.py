@@ -56,16 +56,14 @@ def test_partial_refund_tracking():
 def test_cumulative_limit():
     s = Store()
     from paylane.tools import issue_refund
-    # Refund TXN-58214 ($42.50) and TXN-58237 ($75) = $117.50
+    # Rolling cap is $75 TOTAL. Refund $42.50 + $20 = $62.50
     issue_refund(s, "TXN-58214", 42.5)
-    issue_refund(s, "TXN-58237", 75)
-    # Add a $40 partial refund on TXN-58219 ($25 transaction, so do $20)
     issue_refund(s, "TXN-58219", 20)
-    # Now $137.50 total. Next $15 would exceed $150 cap
+    # Next $15 would exceed $75
     ok, reason = refund_allowed(s, V, "TXN-58306", 15)
     assert not ok
     assert reason == "cumulative_limit_escalate"
-    # But $12.50 should be allowed ($137.50 + $12.50 = $150)
+    # But $12.50 is allowed ($62.50 + $12.50 = $75)
     ok, reason = refund_allowed(s, V, "TXN-58306", 12.5)
     assert ok
 

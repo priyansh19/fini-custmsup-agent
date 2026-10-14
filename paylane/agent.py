@@ -87,6 +87,20 @@ class Agent:
                 return tid
         return None
 
+    def _resolution_gate(self, txn_id):
+        """Resolution-first (code): for charges with a known non-refund fix (descriptor, auth hold,
+        subscription, duplicate-looking pending), the fix must be offered in an earlier turn first."""
+        t = self.store.transactions.get(txn_id) or {}
+        if not t.get("resolution"):
+            return None
+        shown_turn = self.session.get("resolution_shown", {}).get(txn_id)
+        if shown_turn is not None and shown_turn < self.session.get("turn", 0):
+            return None
+        self.session.setdefault("resolution_shown", {}).setdefault(txn_id, self.session.get("turn", 0))
+        return {"ok": False, "reason": "resolution_first",
+                "resolution": t["resolution"],
+                "instruction": "Explain this to the customer and ask if it solves their issue. Refund only if they still want it in their next message."}
+
     def _session_note(self) -> str:
         """Authoritative session facts from code, refreshed every model call (models forget across turns)."""
         s = self.session
@@ -182,6 +196,11 @@ class Agent:
                 ok, why = refund_allowed(self.store, self.session, args["txn_id"], max(left, 0.01))
                 if self.session.get("fraud_claim"): ok, why = False, "fraud_claim_escalate"
                 res["refund_check"] = {"eligible_for_full_refund": ok, "reason": why, "refundable_remaining": max(left, 0)}
+            if "resolution" in res:
+                shown = self.session.setdefault("resolution_shown", {})
+                shown.setdefault(args["txn_id"], self.session.get("turn", 0))
+                res["resolution_first"] = ("Explain this to the customer and ask whether it solves their issue. "
+                                           "Do NOT refund in this reply; refund only if they still want it afterwards and policy allows.")
         elif name == "issue_refund" and self.guardrail:
             # SECURITY: Refuse refunds if verification is locked
             if self.session.get("verification_locked"):
@@ -193,7 +212,11 @@ class Agent:
                 try: float(args.get("amount", 0))
                 except (TypeError, ValueError): args = {**args, "amount": 0}
                 ok, reason = refund_allowed(self.store, self.session, args.get("txn_id"), float(args.get("amount", 0)))
-                res = TOOLS[name](self.store, **args) if ok else {"ok": False, "reason": f"blocked_by_policy:{reason}"}
+                gate = self._resolution_gate(args.get("txn_id"))
+                if ok and gate:
+                    res = gate
+                else:
+                    res = TOOLS[name](self.store, **args) if ok else {"ok": False, "reason": f"blocked_by_policy:{reason}"}
         elif name == "escalate_to_human" and self._wrongful_policy_escalation(args):
             res = {"ok": False, "error": "not_escalated: " + self._wrongful_policy_escalation(args) +
                    " is within policy (refund_check eligible: amount <= $75 and under 30 days). Issue the refund with issue_refund instead."}
@@ -220,6 +243,7 @@ class Agent:
         if FRAUD_RE.search(user_text):
             self.session["fraud_claim"] = True   # code guardrail: no auto-refunds once fraud is claimed
         self.messages.append({"role": "user", "content": user_text})
+        self.session["turn"] = self.session.get("turn", 0) + 1
         import time as _t
         turn_deadline = _t.monotonic() + TURN_BUDGET_S
         for _ in range(MAX_STEPS):

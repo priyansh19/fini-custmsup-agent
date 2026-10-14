@@ -107,7 +107,7 @@ class OpenRouterProvider:
         import time
         from openai import OpenAI  # pip install openai
         self.time = time
-        self.model = model or os.getenv("OPENROUTER_MODEL", "nvidia/nemotron-3.5-lightning:free")
+        self.model = model or os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
         self.retries = int(os.getenv("OPENROUTER_RETRIES", "4"))
         self.client = OpenAI(
             api_key=os.environ.get("OPENROUTER_API_KEY", ""),

@@ -26,11 +26,17 @@ def test_boundaries():
     assert refund_allowed(s, V, "TXN-57549", 20)[1] == "too_old_escalate"  # day 31
 
 
-def test_cumulative_exact_150_then_over():
+def test_cumulative_exact_75_then_over():
     a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
-             tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), tc(3, "issue_refund", txn_id="TXN-58237", amount=75),
-             tc(4, "issue_refund", txn_id="TXN-58277", amount=32.5), tc(5, "issue_refund", txn_id="TXN-58209", amount=10), say("x")], "hi")
-    assert len(ok_refunds(a)) == 3
+             tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), tc(3, "issue_refund", txn_id="TXN-58277", amount=32.5),
+             tc(4, "issue_refund", txn_id="TXN-58209", amount=10), say("x")], "hi")
+    assert len(ok_refunds(a)) == 2
+
+
+def test_single_75_uses_whole_rolling_allowance():
+    a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
+             tc(2, "issue_refund", txn_id="TXN-58237", amount=75), tc(3, "issue_refund", txn_id="TXN-58219", amount=25), say("x")], "hi")
+    assert [c[1]["txn_id"] for c in ok_refunds(a)] == ["TXN-58237"]
 
 
 def test_fraud_claim_blocks_refund_in_code():
@@ -79,13 +85,12 @@ def test_ids_unique_after_state_rebuild():
     """Round-1 live bug: refund ids restarted per serverless instance and overwrote earlier refunds."""
     import paylane.tools as T
     a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
-             tc(2, "issue_refund", txn_id="TXN-58237", amount=75), tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5),
-             tc(4, "issue_refund", txn_id="TXN-58277", amount=32.5), say("x")], "hi")
+             tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5), tc(3, "issue_refund", txn_id="TXN-58277", amount=32.5), say("x")], "hi")
     st = a.to_state()
     T._ids = __import__("itertools").count(1)  # simulate a cold start
     b = Agent(ScriptedProvider([tc(5, "issue_refund", txn_id="TXN-58219", amount=25), say("y")]))
     b.load_state(st); b.send("and TXN-58219")
-    assert len(b.store.refunds) == 3 and not ok_refunds(b)[3:]
+    assert len(b.store.refunds) == 2 and not ok_refunds(b)[2:]   # $75 rolling cap reached; R0001/R0002 not overwritten
 
 
 def test_lockout_auto_escalates():
@@ -161,3 +166,30 @@ def test_incomplete_credentials_do_not_count_as_failed_attempt():
     for _ in range(4):
         r = a2._run_tool("verify_customer", {"email": "amara.okafor@maplecrest.test", "last4": ""})
     assert a2.session["failed_verifications"] == 0 and not a2.session["verification_locked"]
+
+
+def test_resolution_first_blocks_refund_same_turn():
+    a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
+             tc(2, "issue_refund", txn_id="TXN-58433", amount=60), say("x")], "Refund the Marriott hold TXN-58433")
+    assert not ok_refunds(a)
+
+
+def test_resolution_first_allows_refund_after_offer_next_turn():
+    a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
+             tc(2, "get_transaction", customer_id="PL-48213", txn_id="TXN-58461"), say("Check tracking first?"),
+             tc(3, "issue_refund", txn_id="TXN-58461", amount=48, reason="not received"), say("Done")],
+            "My Allbirds order TXN-58461 never arrived", "Already tried, refund please")
+    assert len(ok_refunds(a)) == 1
+
+
+def test_plain_eligible_refund_not_gated():
+    a = run([tc(1, "verify_customer", email="amara.okafor@maplecrest.test", last4="6417"),
+             tc(2, "issue_refund", txn_id="TXN-58214", amount=42.5, reason="cancelled but billed"), say("Done")],
+            "Refund TXN-58214, I cancelled Spotify but was billed")
+    assert len(ok_refunds(a)) == 1
+
+
+def test_get_transaction_exposes_resolution_context():
+    from paylane.tools import get_transaction
+    r = get_transaction(Store(), "PL-48213", "TXN-58451")
+    assert r["kind"] == "authorization_hold" and r["related_txn"] == "TXN-58450" and "resolution" in r

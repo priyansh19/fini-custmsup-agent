@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c1",
+          "id": "call_Y74v8u3TZzHOYXj0NRB4F5Dm",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,13 +22,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c1",
+      "tool_call_id": "call_Y74v8u3TZzHOYXj0NRB4F5Dm",
       "name": "verify_customer",
       "content": "{\"verified\": false}"
     },
     {
       "role": "assistant",
-      "content": "Those details don't match."
+      "content": "Those details don't match, so I can't access this account. Please provide the correct email address and the last 4 digits of your card."
     },
     {
       "role": "user",
@@ -39,7 +39,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c2",
+          "id": "call_kRgi5G9vVPCmgKV1ivdOUaBu",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -50,13 +50,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c2",
+      "tool_call_id": "call_kRgi5G9vVPCmgKV1ivdOUaBu",
       "name": "verify_customer",
       "content": "{\"verified\": false}"
     },
     {
       "role": "assistant",
-      "content": "Those details don't match."
+      "content": "Those details don't match, so I can't access this account. Please check and provide the correct email address and the last 4 digits of your card."
     },
     {
       "role": "user",
@@ -67,7 +67,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "c3",
+          "id": "call_E17NSTsFuvJWDwzII1zWv1Ep",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -78,13 +78,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "c3",
+      "tool_call_id": "call_E17NSTsFuvJWDwzII1zWv1Ep",
       "name": "verify_customer",
       "content": "{\"verified\": false, \"error\": \"verification_locked_after_3_attempts\", \"escalation\": \"created_automatically\", \"ticket_id\": \"TK0001\", \"tell_customer\": \"A specialist will follow up by email.\"}"
     },
     {
       "role": "assistant",
-      "content": "Those details don't match."
+      "content": "Your account has been locked after multiple failed verification attempts. A specialist will follow up by email to assist you further."
     },
     {
       "role": "user",
@@ -92,27 +92,7 @@
     },
     {
       "role": "assistant",
-      "content": null,
-      "tool_calls": [
-        {
-          "id": "c4",
-          "name": "escalate_to_human",
-          "arguments": {
-            "customer_id": "",
-            "summary": "Multiple failed verification attempts (3+), possible account takeover"
-          }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "tool_call_id": "c4",
-      "name": "escalate_to_human",
-      "content": "{\"ticket_id\": \"TK0002\"}"
-    },
-    {
-      "role": "assistant",
-      "content": "I can't proceed after multiple failed attempts. A specialist will follow up by email."
+      "content": "Your account is locked after multiple failed verification attempts. A specialist will follow up by email to assist you further."
     }
   ],
   "tool_calls": [
@@ -159,16 +139,6 @@
         "escalation": "created_automatically",
         "ticket_id": "TK0001",
         "tell_customer": "A specialist will follow up by email."
-      }
-    ],
-    [
-      "escalate_to_human",
-      {
-        "customer_id": "unverified",
-        "summary": "Multiple failed verification attempts (3+), possible account takeover"
-      },
-      {
-        "ticket_id": "TK0002"
       }
     ]
   ],

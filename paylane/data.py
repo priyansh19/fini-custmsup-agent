@@ -24,10 +24,29 @@ _TRANSACTIONS = {
     "TXN-58262": {"customer_id": "PL-48213", "amount": 75.01,  "date": "2026-10-05", "merchant": "BestBuy",      "status": "settled"},   # $75.01 -> over hard cap
     "TXN-57560": {"customer_id": "PL-48213", "amount": 20.00,  "date": "2026-09-12", "merchant": "Equinox",          "status": "settled"},   # age 29 -> refundable
     "TXN-57549": {"customer_id": "PL-48213", "amount": 20.00,  "date": "2026-09-10", "merchant": "Waterstones",    "status": "settled"},   # age 31 -> too old
-    "TXN-58277": {"customer_id": "PL-48213", "amount": 32.50,  "date": "2026-10-06", "merchant": "Uniqlo",       "status": "settled"},   # TXN-58214+TXN-58237+TXN-58277 = exactly $150
+    "TXN-58277": {"customer_id": "PL-48213", "amount": 32.50,  "date": "2026-10-06", "merchant": "Uniqlo",       "status": "settled"},   # TXN-58214+TXN-58277 = exactly $75 rolling limit
     "TXN-61450": {"customer_id": "PL-51907", "amount": 60.00,  "date": "2026-10-04", "merchant": "Steam",        "status": "settled"},   # frozen-card customer
     "TXN-73318": {"customer_id": "PL-36642", "amount": 900.00, "date": "2026-10-06", "merchant": "CoinVault Exchange","status": "settled"},   # large fraud claim
     "TXN-73325": {"customer_id": "PL-36642", "amount": 50.00,  "date": "2026-10-07", "merchant": "Lyft",         "status": "settled"},   # small fraud claim
+    # --- resolution-first cases: the issue can usually be solved without a refund (see "resolution") ---
+    "TXN-58420": {"customer_id": "PL-48213", "amount": 16.99, "date": "2026-10-09", "merchant": "Spotify",       "status": "settled",
+                  "descriptor": "SP*SPTFY FAMILY 8775881", "recurring": True,
+                  "resolution": "Statement descriptor 'SP*SPTFY FAMILY' is the customer's own Spotify Family plan (monthly renewal on the 9th). Explain the descriptor; it is not an unknown merchant."},
+    "TXN-58433": {"customer_id": "PL-48213", "amount": 60.00, "date": "2026-10-10", "merchant": "Marriott Hotels", "status": "pending",
+                  "descriptor": "MARRIOTT HOLD 4471", "kind": "authorization_hold",
+                  "resolution": "Temporary authorization hold placed at hotel check-in. It is not a charge; it is released automatically when the hotel posts the final bill. No refund needed."},
+    "TXN-58447": {"customer_id": "PL-48213", "amount": 13.99, "date": "2026-10-07", "merchant": "Disney+",        "status": "settled",
+                  "descriptor": "DISNEYPLUS 888-905-7888", "recurring": True,
+                  "resolution": "Monthly subscription auto-renewal. To stop future charges the customer cancels in Disney+ > Account > Subscription > Cancel subscription. Offer that first; refund this renewal only if they still want it."},
+    "TXN-58450": {"customer_id": "PL-48213", "amount": 28.40, "date": "2026-10-09", "merchant": "Uber Eats",      "status": "settled",
+                  "descriptor": "UBER *EATS PENDING", "related_txn": "TXN-58451",
+                  "resolution": "This is the real (posted) charge for the order. TXN-58451 is the pending authorization for the SAME order and will drop off; the customer was charged once, not twice."},
+    "TXN-58451": {"customer_id": "PL-48213", "amount": 28.40, "date": "2026-10-09", "merchant": "Uber Eats",      "status": "pending",
+                  "descriptor": "UBER *EATS PENDING", "kind": "authorization_hold", "related_txn": "TXN-58450",
+                  "resolution": "Pending authorization for the same order as posted charge TXN-58450. It drops off automatically; it is not a second charge. No refund needed."},
+    "TXN-58461": {"customer_id": "PL-48213", "amount": 48.00, "date": "2026-10-04", "merchant": "Allbirds",       "status": "settled",
+                  "descriptor": "ALLBIRDS.COM",
+                  "resolution": "Online order. If it hasn't arrived, first suggest checking the order's tracking link / contacting Allbirds. If the customer already tried and the order still hasn't arrived, a refund is appropriate (within policy)."},
 }
 
 
