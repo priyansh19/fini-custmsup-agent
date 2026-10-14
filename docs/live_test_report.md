@@ -1,5 +1,7 @@
 # Fini / Paylane agent: live test report (2026-10-12)
 
+> Historical report from the Oct 12 live round. Those runs used the rolling limit in force at the time ($150). The current rule is **$75 total per customer per rolling 30 days** (see [decisions.md](decisions.md)), and the harness cases have been updated to match.
+
 Target: https://fini-custmsup-agent.vercel.app (POST /api/chat, the same way the web UI calls it).
 Model: `nvidia/nemotron-3-super-120b-a12b:free` via OpenRouter.
 Harness: `tests/live/` (138 distinct cases).
