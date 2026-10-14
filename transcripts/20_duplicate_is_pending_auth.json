@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_ZqkcdAWcJUhZEItABxisl5Vy",
+          "id": "call_95RsMmyjyUR9hJ4sg9NLZLiA",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_ZqkcdAWcJUhZEItABxisl5Vy",
+      "tool_call_id": "call_95RsMmyjyUR9hJ4sg9NLZLiA",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_bKn2GcAeRfF8pSPRXEAQquWd",
+          "id": "call_Nvt3NaftYeI4c6eQRcf7Ui60",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-48213",
@@ -39,7 +39,7 @@
           }
         },
         {
-          "id": "call_N4vBOcHcf0egTwppgMznF4WY",
+          "id": "call_9bxrIiyovJCDSEhStaoaZ0D0",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-48213",
@@ -50,19 +50,19 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_bKn2GcAeRfF8pSPRXEAQquWd",
+      "tool_call_id": "call_Nvt3NaftYeI4c6eQRcf7Ui60",
       "name": "get_transaction",
       "content": "{\"amount\": 28.4, \"date\": \"2026-10-09\", \"merchant\": \"Uber Eats\", \"status\": \"settled\", \"descriptor\": \"UBER *EATS PENDING\", \"related_txn\": \"TXN-58451\", \"resolution\": \"This is the real (posted) charge for the order. TXN-58451 is the pending authorization for the SAME order and will drop off; the customer was charged once, not twice.\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 28.4}, \"resolution_first\": \"Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows.\"}"
     },
     {
       "role": "tool",
-      "tool_call_id": "call_N4vBOcHcf0egTwppgMznF4WY",
+      "tool_call_id": "call_9bxrIiyovJCDSEhStaoaZ0D0",
       "name": "get_transaction",
       "content": "{\"amount\": 28.4, \"date\": \"2026-10-09\", \"merchant\": \"Uber Eats\", \"status\": \"pending\", \"descriptor\": \"UBER *EATS PENDING\", \"kind\": \"authorization_hold\", \"related_txn\": \"TXN-58450\", \"resolution\": \"Pending authorization for the same order as posted charge TXN-58450. It drops off automatically; it is not a second charge. No refund needed.\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 28.4}, \"resolution_first\": \"Explain this to the customer and ask whether it solves their issue. Do NOT refund in this reply; refund only if they still want it afterwards and policy allows.\"}"
     },
     {
       "role": "assistant",
-      "content": "You were charged once for your Uber Eats order, but it looks like there was a pending authorization that appeared as a second charge. - **TXN-58450** is the actual charge of $28.40. - **TXN-58451** is a pending authorization for the same order, which will drop off automatically. Does this explanation resolve your concern, or would you still like to proceed with a refund?"
+      "content": "You were charged once for your Uber Eats order, but it appears you see two transactions: \n\n- **TXN-58450** is the actual charge of $28.40. - **TXN-58451** is a pending authorization for the same order, which will drop off automatically and is not a second charge. Does this explanation resolve your concern, or would you still like to proceed with a refund?"
     },
     {
       "role": "user",

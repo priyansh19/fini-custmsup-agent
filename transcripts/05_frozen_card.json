@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_9nvwCGOW0i6HYZhtOJOnwPMa",
+          "id": "call_qyOCBgzPToJhEHi1Uv6Xfz5N",
           "name": "verify_customer",
           "arguments": {
             "email": "mateo.alvarez@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_9nvwCGOW0i6HYZhtOJOnwPMa",
+      "tool_call_id": "call_qyOCBgzPToJhEHi1Uv6Xfz5N",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-51907\", \"card_status\": \"frozen\", \"freeze_reason\": \"Unusual login from a new country\", \"escalation\": \"created_automatically\", \"ticket_id\": \"TK0001\", \"tell_customer\": \"A specialist will follow up by email.\"}"
     },
@@ -39,7 +39,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_jLw4wp7ntjag05XINxsVHedc",
+          "id": "call_cjRY6mNyOOoURW5TTixRK8rA",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-51907",
@@ -50,7 +50,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_jLw4wp7ntjag05XINxsVHedc",
+      "tool_call_id": "call_cjRY6mNyOOoURW5TTixRK8rA",
       "name": "get_transaction",
       "content": "{\"amount\": 60.0, \"date\": \"2026-10-04\", \"merchant\": \"Steam\", \"status\": \"settled\", \"refund_check\": {\"eligible_for_full_refund\": false, \"reason\": \"frozen_card_escalate\", \"refundable_remaining\": 60.0}}"
     },
@@ -59,7 +59,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_uD1q54FiFiqk920b303hVuHb",
+          "id": "call_wqQJSWnXBwgwETVMNNsIYkhr",
           "name": "escalate_to_human",
           "arguments": {
             "customer_id": "PL-51907",
@@ -70,7 +70,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_uD1q54FiFiqk920b303hVuHb",
+      "tool_call_id": "call_wqQJSWnXBwgwETVMNNsIYkhr",
       "name": "escalate_to_human",
       "content": "{\"ticket_id\": \"TK0002\"}"
     },

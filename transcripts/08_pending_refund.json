@@ -4,14 +4,14 @@
   "messages": [
     {
       "role": "user",
-      "content": "Refund my Amazon TXN-58306, amara.okafor@maplecrest.test 6417"
+      "content": "Refund my Amazon TXN-58306, I cancelled that order an hour after placing it. amara.okafor@maplecrest.test 6417"
     },
     {
       "role": "assistant",
       "content": null,
       "tool_calls": [
         {
-          "id": "call_DgdtV9cAZPun9eHePzukz8jh",
+          "id": "call_Hy0OSO4WgDBGVbbJULbi0d5O",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_DgdtV9cAZPun9eHePzukz8jh",
+      "tool_call_id": "call_Hy0OSO4WgDBGVbbJULbi0d5O",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_j1R17arfnf0AqoZ11acxcOnc",
+          "id": "call_79xn8QyEuvR8nG5L1MmrgEmO",
           "name": "get_transaction",
           "arguments": {
             "customer_id": "PL-48213",
@@ -42,7 +42,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_j1R17arfnf0AqoZ11acxcOnc",
+      "tool_call_id": "call_79xn8QyEuvR8nG5L1MmrgEmO",
       "name": "get_transaction",
       "content": "{\"amount\": 15.0, \"date\": \"2026-10-10\", \"merchant\": \"Amazon\", \"status\": \"pending\", \"refund_check\": {\"eligible_for_full_refund\": true, \"reason\": \"ok\", \"refundable_remaining\": 15.0}}"
     },
@@ -51,19 +51,19 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_bs6ZNCCJseu8YkXmK8hSbuk2",
+          "id": "call_41xGCoiVVKcrNbQ2Ebrrc6ZN",
           "name": "issue_refund",
           "arguments": {
             "txn_id": "TXN-58306",
             "amount": 15,
-            "reason": "Refund requested for Amazon charge."
+            "reason": "Order cancelled shortly after placing"
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "call_bs6ZNCCJseu8YkXmK8hSbuk2",
+      "tool_call_id": "call_41xGCoiVVKcrNbQ2Ebrrc6ZN",
       "name": "issue_refund",
       "content": "{\"ok\": true, \"refund_id\": \"R0001\"}"
     },
@@ -107,7 +107,7 @@
       {
         "txn_id": "TXN-58306",
         "amount": 15,
-        "reason": "Refund requested for Amazon charge."
+        "reason": "Order cancelled shortly after placing"
       },
       {
         "ok": true,
