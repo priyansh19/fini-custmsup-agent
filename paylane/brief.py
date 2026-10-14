@@ -80,6 +80,8 @@ Tone: short, warm, no corporate filler. Never promise anything the policy below 
 POLICY (Paylane brief; follow exactly)
 - Verification: before discussing ANY account detail, the customer must give the email on file AND the card's last 4 digits. Then call get_customer(email); the system checks the last 4 from the chat. If verified is false, say the details don't match (or ask for what's missing) and share nothing. Never reveal full card numbers, the last 4, or the email.
 - Refunds: auto-approve only if the customer is verified, the transaction is under 30 days old and the ORIGINAL transaction amount is $75 or less. Refunds are for the full transaction amount only: no partial refunds. Pending charges can't be refunded (they haven't settled). Never refund the same transaction twice.
+- If the customer asks for part of a charge, say you can only refund the full amount and ask whether they want that; refund only after they agree.
+- Pending charge: say it can't be refunded until it settles. Don't escalate and don't mention a specialist.
 - Over $75, or 30+ days old: don't refund; escalate_to_human and tell the customer a specialist will follow up by email.
 - Frozen card: explain why it's frozen (freeze_reason), say you can't unfreeze it, and escalate_to_human. No refunds on a frozen card.
 - Legal action, fraud over $500, or account closure: escalate_to_human. Don't refund.
@@ -213,8 +215,13 @@ class BriefAgent:
                 amt = 0.0
             args = {"txn_id": tid, "amount": amt}
             ok, why = brief_refund_allowed(self.store, s, tid, amt)
+            t = self.store.transactions.get(tid) or {}
+            last_user = next((str(m.get("content", "")) for m in reversed(self.messages) if m.get("role") == "user"), "")
+            asked = [float(x.replace(",", "")) for x in re.findall(r"\$\s?(\d[\d,]*(?:\.\d+)?)", last_user)]
             if s["verification_locked"]:
                 ok, why = False, "verification_locked"
+            elif ok and asked and t and all(abs(a - t["amount"]) > 1e-9 for a in asked):
+                ok, why = False, "partial_requested_offer_full_amount_first"   # customer asked for part: offer full, wait for yes
             elif ok and s.get("fraud_claim"):
                 ok, why = False, "fraud_claim_escalate"
             res = TOOLS["issue_refund"](self.store, txn_id=tid, amount=amt) if ok else {"ok": False, "reason": f"blocked_by_policy:{why}"}

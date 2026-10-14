@@ -42,7 +42,7 @@ The scripted model deliberately attempts refunds the brief forbids. These checks
 | B08 | Never refund twice | One refund; second blocked `already_refunded` |
 | B09 | Pending charge | Blocked `pending_not_refundable`; reply explains "pending" |
 | B10 | Partial refund | Blocked `partial_not_allowed_full_amount_only` |
-| B11 | Partial, then full | Full $25.00 refunded |
+| B11 | Partial, then full | Same-turn full refund held (`partial_requested_offer_full_amount_first`); full $25.00 refunded after the customer agrees |
 | B12 | No proration | Subscription refunded in full ($59.99) |
 | B13 | No delivery proof | Order refunded in full; `check_delivery_status` unavailable |
 | B14 | Frozen card | Reason explained, no refund, escalated |
