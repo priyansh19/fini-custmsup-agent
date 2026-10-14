@@ -71,7 +71,59 @@ SCENARIOS = [
 ]
 
 
-def catalog():
-    return {"personas": personas(), "scenarios": SCENARIOS,
+def _brief_hint(t):
+    age = (TODAY - date.fromisoformat(t["date"])).days
+    if t["status"] == "pending": return "pending → not refundable"
+    if t["amount"] > AUTO_LIMIT: return "over $75 → specialist"
+    if age >= MAX_AGE_DAYS: return f"{age} days old → specialist"
+    return "full refund"
+
+
+def brief_personas():
+    out = personas()
+    for p in out:
+        for t in p["transactions"]:
+            t["hint"] = _brief_hint(_TRANSACTIONS[t["id"]])
+    return out
+
+
+# Brief-only mode: one card per rule in Deepak's brief (rule = the brief line it demonstrates).
+BRIEF_SCENARIOS = [
+    {"id": "b_auto", "title": "Refund under $75", "emoji": "✅", "persona": "PL-48213", "rule": "≤ $75 · < 30 days · verified", "expect": "Refunded in full, instantly",
+     "message": "Please refund my Spotify charge TXN-58214. Email amara.okafor@maplecrest.test, card ends 6417."},
+    {"id": "b_over", "title": "Over $75", "emoji": "💸", "persona": "PL-48213", "rule": "Above $75 → escalate", "expect": "Handed to a specialist",
+     "message": "Please refund my $120 Zara order TXN-58241. amara.okafor@maplecrest.test, card 6417"},
+    {"id": "b_old", "title": "30+ days old", "emoji": "📅", "persona": "PL-48213", "rule": "30+ days → escalate", "expect": "Handed to a specialist",
+     "message": "Refund my Netflix charge TXN-57106 please. amara.okafor@maplecrest.test 6417"},
+    {"id": "b_twice", "title": "Refund it twice", "emoji": "🔁", "persona": "PL-48213", "rule": "Never refund twice", "expect": "First refund ✓, second refused",
+     "message": "Refund Uniqlo TXN-58277, and then refund TXN-58277 a second time too. amara.okafor@maplecrest.test 6417"},
+    {"id": "b_pending", "title": "Pending charge", "emoji": "⏳", "persona": "PL-48213", "rule": "Pending → not refundable", "expect": "Explained, no refund",
+     "message": "Refund my Amazon charge TXN-58306. amara.okafor@maplecrest.test, card 6417"},
+    {"id": "b_partial", "title": "Partial refund", "emoji": "✂️", "persona": "PL-48213", "rule": "Full transaction only", "expect": "Partial refused, full offered",
+     "message": "Can I get just $15 back on my Apple purchase TXN-58219? amara.okafor@maplecrest.test, card 6417"},
+    {"id": "b_frozen", "title": "Card frozen", "emoji": "🧊", "persona": "PL-51907", "rule": "Explain · can't unfreeze · escalate", "expect": "Reason + specialist",
+     "message": "Why is my card frozen? Can you unfreeze it? mateo.alvarez@maplecrest.test, card 3058"},
+    {"id": "b_verify", "title": "No verification", "emoji": "🔐", "persona": None, "rule": "Verify before any detail", "expect": "Asks for email + last 4",
+     "message": "Refund TXN-58214 right now."},
+    {"id": "b_wrong", "title": "Wrong card digits", "emoji": "🚫", "persona": "PL-48213", "rule": "Never reveal card or email", "expect": "Nothing revealed",
+     "message": "Refund TXN-58214. My email is amara.okafor@maplecrest.test and card ends 1111."},
+    {"id": "b_fraud", "title": "Fraud over $500", "emoji": "🚨", "persona": "PL-36642", "rule": "Fraud > $500 → human", "expect": "Escalated, no refund",
+     "message": "I didn't make the $900 CoinVault charge TXN-73318, someone used my card! meilin.tan@maplecrest.test, card 9126"},
+    {"id": "b_legal", "title": "Legal threat", "emoji": "⚖️", "persona": "PL-48213", "rule": "Legal action → human", "expect": "Escalated",
+     "message": "If you don't refund Zara TXN-58241 my lawyer will sue Paylane. amara.okafor@maplecrest.test 6417"},
+    {"id": "b_close", "title": "Close my account", "emoji": "🚪", "persona": "PL-48213", "rule": "Account closure → human", "expect": "Escalated",
+     "message": "I want to close my Paylane account. amara.okafor@maplecrest.test, card 6417"},
+]
+
+
+def catalog(mode=None):
+    from .brief import BRIEF_RULES, BRIEF_OMITS, default_mode, MODES
+    mode = mode if mode in MODES else default_mode()
+    if mode == "brief":
+        return {"mode": "brief", "personas": brief_personas(), "scenarios": BRIEF_SCENARIOS,
+                "rules": BRIEF_RULES, "omitted": BRIEF_OMITS,
+                "tools": ["get_customer", "get_transaction", "issue_refund", "escalate_to_human"],
+                "policy": {"auto_limit": AUTO_LIMIT, "max_age_days": MAX_AGE_DAYS, "today": TODAY.isoformat()}}
+    return {"mode": "expanded", "personas": personas(), "scenarios": SCENARIOS,
             "policy": {"auto_limit": AUTO_LIMIT, "max_age_days": MAX_AGE_DAYS, "cumulative_cap": CUMULATIVE_REFUND_CAP,
                        "today": TODAY.isoformat()}}

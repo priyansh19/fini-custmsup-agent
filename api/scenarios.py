@@ -8,4 +8,6 @@ from paylane.catalog import catalog
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        send_json(self, catalog(), cache='s-maxage=300')
+        from urllib.parse import urlparse, parse_qs
+        mode = (parse_qs(urlparse(self.path).query).get("mode") or [None])[0]
+        send_json(self, catalog(mode), cache='s-maxage=300')
