@@ -69,26 +69,30 @@ export default function Support() {
         <div className={s.navLinks}>
           <a>Cards</a><a>Payments</a><a className={s.active}>Help</a>
         </div>
-        <span className={`${s.modePill} ${brief ? s.modePillBrief : ''}`}>{brief ? '◆ Brief-only mode' : '◇ Expanded mode'}</span>
         <Link href="/admin" className={s.devLink}>Developer view ⚙</Link>
+        <button role="switch" aria-checked={brief} className={`${s.briefToggle} ${brief ? s.briefToggleOn : ''}`}
+          onClick={() => switchMode(brief ? 'expanded' : 'brief')} title="Brief-only mode: Deepak's brief exactly">
+          <span className={s.knob} aria-hidden />Brief-only mode
+        </button>
       </nav>
 
       <header className={s.hero}>
         <div className={s.badge}>● Support is online · avg reply in seconds</div>
         <h1>Hi there, how can we <em>help?</em></h1>
         <p>Refunds, card freezes and suspicious charges, sorted in one chat. Pick a topic or start a conversation.</p>
-        <div className={s.modeSwitch} role="tablist" aria-label="Policy mode">
-          <button role="tab" aria-selected={brief} className={brief ? s.modeOn : ''} onClick={() => switchMode('brief')}>
-            <b>Brief-only</b><small>Deepak's brief, exactly · 4 spec tools</small></button>
-          <button role="tab" aria-selected={!brief} className={!brief ? s.modeOn : ''} onClick={() => switchMode('expanded')}>
-            <b>Expanded</b><small>Submitted version · resolution-first extras</small></button>
-          <span className={`${s.modeGlider} ${brief ? '' : s.modeGliderRight}`} aria-hidden />
-        </div>
         <button className={s.cta} onClick={() => { setOpen(true); setTimeout(() => inputRef.current?.focus(), 50); }}>💬 Chat with support</button>
       </header>
 
       <main className={s.grid}>
         <section className={s.topics}>
+        {brief && cat.rules && (
+          <div className={s.rulesPanel}>
+            <h2>Brief policy <span className={s.rulesBadge}>active</span></h2>
+            <ol>{cat.rules.map(r => <li key={r.id}>{r.rule}</li>)}</ol>
+            <div className={s.toolsRow}>{(cat.tools || []).map(t => <code key={t}>{t}</code>)}</div>
+            {cat.omitted && <div className={s.omitted}><span>Not in this mode:</span> {cat.omitted.join(' · ')}</div>}
+          </div>
+        )}
           <h2>{brief ? 'Every rule in the brief' : 'Popular topics'} <small>tap to try it live</small></h2>
           <div className={s.cards}>
             {cat.scenarios.map((sc, i) => (
@@ -103,16 +107,7 @@ export default function Support() {
           </div>
         </section>
 
-        <aside className={s.sideCol}>
-        {brief && cat.rules && (
-          <div className={s.rulesPanel}>
-            <h2>Brief policy <span className={s.rulesBadge}>active</span></h2>
-            <ol>{cat.rules.map(r => <li key={r.id}>{r.rule}</li>)}</ol>
-            <div className={s.toolsRow}>{(cat.tools || []).map(t => <code key={t}>{t}</code>)}</div>
-            {cat.omitted && <div className={s.omitted}><span>Not in this mode:</span> {cat.omitted.join(' · ')}</div>}
-          </div>
-        )}
-        <div className={s.personaBox}>
+        <aside className={s.personaBox}>
           <h2>Demo customer</h2>
           <div className={s.personaTabs}>
             {cat.personas.map(x => (
@@ -142,7 +137,6 @@ export default function Support() {
               ))}
             </div>
           )}
-        </div>
         </aside>
       </main>
 
@@ -153,7 +147,7 @@ export default function Support() {
       <div className={`${s.widget} ${open ? s.widgetOpen : ''}`} role="dialog" aria-label="Paylane support chat">
         <div className={s.wHead}>
           <div className={s.agentAv}>P<span className={s.online} /></div>
-          <div><b>Paylane Support</b><small>{chat.loading ? 'typing…' : chat.demoMode ? 'Demo mode' : 'Online · AI assistant'} · <span className={s.wMode}>{brief ? 'Brief-only' : 'Expanded'}</span></small></div>
+          <div><b>Paylane Support</b><small>{chat.loading ? 'typing…' : chat.demoMode ? 'Demo mode' : 'Online · AI assistant'}{brief && <> · <span className={s.wMode}>Brief-only</span></>}</small></div>
           <button onClick={chat.reset} title="New conversation" className={s.wBtn}>↺</button>
           <button onClick={() => setOpen(false)} title="Minimise" className={s.wBtn}>—</button>
         </div>

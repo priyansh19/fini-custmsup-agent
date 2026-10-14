@@ -5,10 +5,9 @@ An LLM customer-support agent for **Paylane**, a fintech handling cards, transfe
 **Live demo:** https://fini-custmsup-agent.vercel.app · **Developer view:** https://fini-custmsup-agent.vercel.app/admin
 Model: `openai/gpt-4o-mini` via OpenRouter.
 
-| Mode | Real-model eval | Scripted eval | Unit tests |
-|---|---|---|---|
-| **Expanded** (default, submitted) | **26/26** ([transcripts](transcripts/)) | **26/26** | **68/68** |
-| **Brief-only** ([details](#brief-only-mode-vs-expanded-mode)) | offline only | **22/22** | **40/40** |
+| Real-model eval | Scripted eval | Unit tests |
+|---|---|---|
+| **26/26** ([transcripts](transcripts/)) | **26/26** | **68/68** |
 
 | Help page | Chat in progress |
 |---|---|
@@ -18,6 +17,34 @@ Model: `openai/gpt-4o-mini` via OpenRouter.
 |---|---|
 | <img src="docs/images/help_mobile.png" width="260"> | ![Admin](docs/images/admin.png) |
 
+## What it does
+
+- **Verification** [From Deepak's brief]: email + card last 4 before any account detail. Locks after 3 failed attempts, which isn't caught out by missing details.
+- **Refund policy**:
+  - [From Deepak's brief] auto-refund only charges of **$75 or less** that are **under 30 days old** (day 30 excluded).
+  - [Our addition] partial refunds up to $75, pending charges refundable, no double refunds, and a **$75 total per customer per rolling 30 days**.
+- **Always to a human** [From Deepak's brief]: any fraud claim (any amount), legal threats, account closure, frozen cards. The only promise made is that *a specialist will follow up by email*.
+- **Resolution first** [Our addition]: explains unfamiliar statement names, hotel holds, posted + pending "duplicates" and subscription cancellation before reaching for a refund. If the customer hasn't said what went wrong, it asks once.
+- **Refund = cancellation** [Our addition]: states the consequence (subscription access ends, order cancelled) and waits for a yes.
+- **Subscription proration** [Our addition]: full refund on the day of the charge, then only the unused days (Adobe $59.99 on day 15 of 30 → $30.00).
+- **Delivery checks** [Our addition, 5th tool `check_delivery_status`]:
+  - in transit → wait
+  - lost → refund
+  - delivered → proof description, or a specialist
+
+## How it fits together
+
+```mermaid
+flowchart LR
+  UI["Next.js help page + messenger<br/>/admin developer view"] -- "message + HMAC-signed state" --> API["/api/chat · /api/health · /api/scenarios<br/>(Vercel Python)"]
+  API --> AG["Agent loop<br/>prompt + code gates"]
+  AG <--> LLM["OpenRouter<br/>gpt-4o-mini"]
+  AG --> POL["Policy engine<br/>$75 cap · 30 days · $75 rolling · proration"]
+  AG --> TOOLS["Mock tools: get_customer · get_transaction ·<br/>issue_refund · escalate_to_human ·<br/>check_delivery_status [Our addition]"]
+```
+
+Full diagrams (service split, chat-turn sequence, refund-gate flowchart, verification state machine) are in [docs/architecture.md](docs/architecture.md).
+
 ## Brief-only mode vs expanded mode
 
 The agent ships with two policy modes, side by side, so the brief and the extended design can be compared directly.
@@ -26,8 +53,7 @@ The agent ships with two policy modes, side by side, so the brief and the extend
 - **Expanded mode** is the submitted version: the brief plus the resolution-first extras. It stays the default, so the live demo behaves exactly as submitted.
 
 **Switching modes**
-- **Help page:** use the **Brief-only / Expanded** toggle in the hero, or open `https://fini-custmsup-agent.vercel.app/?mode=brief`. The active mode shows in the nav badge, the chat header and the footer line. Switching starts a new chat.
-- **Developer view:** `/admin` → *Policy mode*.
+- **Help page:** switch on **Brief-only mode** in the top navigation bar, or open `https://fini-custmsup-agent.vercel.app/?mode=brief`. With the switch off, the page is the expanded version exactly as submitted. With it on, the brief's rules panel, its 12 rule-tagged scenario cards, a Brief-only badge in the chat header and a live tool-call trace appear. Switching starts a new chat.
 - **API:** `POST /api/chat` with `{"message": "...", "policy_mode": "brief"}`. A conversation keeps the mode it started in, because the mode is stored in the signed state.
 - **Server default:** `PAYLANE_POLICY_MODE=brief|expanded` (the default is `expanded`).
 - **Evals:** `python -m evals.run --scripted --mode brief`
@@ -61,34 +87,6 @@ The full suite is 108/108 with either `PAYLANE_POLICY_MODE` setting.
 | Brief-only mode: help page | Brief-only mode: refund with tool calls |
 |---|---|
 | ![Brief help page](docs/images/brief_help.png) | ![Brief chat](docs/images/brief_refund.png) |
-
-## What it does
-
-- **Verification** [From Deepak's brief]: email + card last 4 before any account detail. Locks after 3 failed attempts, which isn't caught out by missing details.
-- **Refund policy**:
-  - [From Deepak's brief] auto-refund only charges of **$75 or less** that are **under 30 days old** (day 30 excluded).
-  - [Our addition] partial refunds up to $75, pending charges refundable, no double refunds, and a **$75 total per customer per rolling 30 days**.
-- **Always to a human** [From Deepak's brief]: any fraud claim (any amount), legal threats, account closure, frozen cards. The only promise made is that *a specialist will follow up by email*.
-- **Resolution first** [Our addition]: explains unfamiliar statement names, hotel holds, posted + pending "duplicates" and subscription cancellation before reaching for a refund. If the customer hasn't said what went wrong, it asks once.
-- **Refund = cancellation** [Our addition]: states the consequence (subscription access ends, order cancelled) and waits for a yes.
-- **Subscription proration** [Our addition]: full refund on the day of the charge, then only the unused days (Adobe $59.99 on day 15 of 30 → $30.00).
-- **Delivery checks** [Our addition, 5th tool `check_delivery_status`]:
-  - in transit → wait
-  - lost → refund
-  - delivered → proof description, or a specialist
-
-## How it fits together
-
-```mermaid
-flowchart LR
-  UI["Next.js help page + messenger<br/>/admin developer view"] -- "message + HMAC-signed state" --> API["/api/chat · /api/health · /api/scenarios<br/>(Vercel Python)"]
-  API --> AG["Agent loop<br/>prompt + code gates"]
-  AG <--> LLM["OpenRouter<br/>gpt-4o-mini"]
-  AG --> POL["Policy engine<br/>$75 cap · 30 days · $75 rolling · proration"]
-  AG --> TOOLS["Mock tools: get_customer · get_transaction ·<br/>issue_refund · escalate_to_human ·<br/>check_delivery_status [Our addition]"]
-```
-
-Full diagrams (service split, chat-turn sequence, refund-gate flowchart, verification state machine) are in [docs/architecture.md](docs/architecture.md).
 
 ## Docs
 
