@@ -286,3 +286,12 @@ def test_delivery_status_scoped_to_customer():
     a = run([tc(1, "verify_customer", email="meilin.tan@maplecrest.test", last4="9126"),
              tc(2, "check_delivery_status", txn_id="TXN-58461"), say("x")], "where's my order TXN-58461")
     assert a.store.calls[1][2] == {"error": "no_delivery_record"}
+
+
+def test_model_stated_notice_in_later_turn_counts():
+    # live replay bug: proof given in a turn with no tool call; the model's own "refunding will cancel… $48.00?" must count
+    a = _order_run("TXN-58461", ["My Allbirds order TXN-58461 never arrived", "I filed a UPS claim, ref 55102", "Yes, go ahead."],
+                   [say("Carrier says delivered. Any proof?"),
+                    say("Thanks. Refunding will cancel your order. Proceed with the refund of $48.00?"),
+                    tc(3, "issue_refund", txn_id="TXN-58461", amount=48), say("Done")])
+    assert len(ok_refunds(a)) == 1

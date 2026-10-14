@@ -11,7 +11,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_YBaqKfm2ec8Pvq920a2GduR4",
+          "id": "call_moBVnxxVsGMyqhB0tqMgIC0O",
           "name": "verify_customer",
           "arguments": {
             "email": "amara.okafor@maplecrest.test",
@@ -22,7 +22,7 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_YBaqKfm2ec8Pvq920a2GduR4",
+      "tool_call_id": "call_moBVnxxVsGMyqhB0tqMgIC0O",
       "name": "verify_customer",
       "content": "{\"verified\": true, \"customer_id\": \"PL-48213\"}"
     },
@@ -31,7 +31,7 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_8cIQHfuUP4xThrzbdFuU85fj",
+          "id": "call_QPnCZb069DxNXB09YaIUxntk",
           "name": "check_delivery_status",
           "arguments": {
             "txn_id": "TXN-58461"
@@ -41,13 +41,13 @@
     },
     {
       "role": "tool",
-      "tool_call_id": "call_8cIQHfuUP4xThrzbdFuU85fj",
+      "tool_call_id": "call_QPnCZb069DxNXB09YaIUxntk",
       "name": "check_delivery_status",
       "content": "{\"order_id\": \"AB-771204\", \"txn_id\": \"TXN-58461\", \"status\": \"delivered\", \"carrier\": \"UPS\", \"tracking\": \"1Z84A6W70312345678\", \"delivered_at\": \"2026-10-08T14:12\", \"proof\": \"Left at front door, photo on file\", \"order_charge\": {\"merchant\": \"Allbirds\", \"amount\": 48.0, \"date\": \"2026-10-04\", \"refundable_remaining\": 48.0, \"policy_allows_refund\": true, \"policy_reason\": \"ok\"}, \"next_step\": \"Carrier shows it delivered. Ask the customer for proof it didn't arrive (carrier claim, photo, police/neighbour report, describe it). Once they describe proof and policy_allows_refund is true, do NOT escalate: tell them refunding cancels the order, get a yes, then issue_refund the full refundable_remaining. Only if they have no proof: escalate_to_human.\"}"
     },
     {
       "role": "assistant",
-      "content": "The carrier shows your Allbirds order (TXN-58461) was delivered on October 8, 2026, and it was left at your front door. They have a photo on file as proof. Could you please provide any proof that it didn't arrive, such as a carrier claim, a photo, or a report from a neighbor or the police? Once I have that, I can assist you further."
+      "content": "The carrier shows your Allbirds order (TXN-58461) was delivered on October 8, 2026, and it was left at your front door. There's a photo on file as proof of delivery. Could you please provide any proof that it didn't arrive? This could be a carrier claim, a photo, or a report from a neighbor or the police. Once I have that, I can assist you further."
     },
     {
       "role": "user",
@@ -58,18 +58,18 @@
       "content": null,
       "tool_calls": [
         {
-          "id": "call_djXOKn9qq7HddrXK5oI1QanP",
+          "id": "call_hIbQkTgbeRREPJJy6evUOypr",
           "name": "escalate_to_human",
           "arguments": {
             "customer_id": "PL-48213",
-            "summary": "Customer claims order TXN-58461 was not received, but the carrier shows it was delivered. No proof available."
+            "summary": "Customer claims order TXN-58461 was not received, but the carrier shows it was delivered. Customer has no proof of non-receipt."
           }
         }
       ]
     },
     {
       "role": "tool",
-      "tool_call_id": "call_djXOKn9qq7HddrXK5oI1QanP",
+      "tool_call_id": "call_hIbQkTgbeRREPJJy6evUOypr",
       "name": "escalate_to_human",
       "content": "{\"ticket_id\": \"TK0001\"}"
     },
@@ -118,7 +118,7 @@
       "escalate_to_human",
       {
         "customer_id": "PL-48213",
-        "summary": "Customer claims order TXN-58461 was not received, but the carrier shows it was delivered. No proof available."
+        "summary": "Customer claims order TXN-58461 was not received, but the carrier shows it was delivered. Customer has no proof of non-receipt."
       },
       {
         "ticket_id": "TK0001"

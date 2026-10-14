@@ -382,8 +382,13 @@ class Agent:
                 self.messages[-1]["content"] = text
                 if re.search(r"cancel", text, re.I) and re.search(r"\?", text):
                     turn = self.session.get("turn", 0)
+                    low = text.lower()
                     for tid, tn in self.session.get("turn_txns", {}).items():
-                        if tn == turn:
+                        t = self.store.transactions.get(tid) or {}
+                        amt = float(t.get("amount", 0) or 0)
+                        mentioned = (tid.lower() in low or (t.get("merchant") and t["merchant"].lower() in low)
+                                     or f"${amt:.2f}" in text or f"${amt:g}" in text)
+                        if tn == turn or (tn >= turn - 2 and mentioned):
                             self.session.setdefault("cancel_notice", {}).setdefault(tid, turn)
                 return text
             # interim text that rides along with tool calls ("I'll process that now") is dropped: the final reply speaks
