@@ -1,6 +1,6 @@
 # Note to the Paylane Head of Support
 
-**Subject: Your support assistant: what it does, what it won't do, and what we need from you**
+**Subject: Your support assistant: what it does, what it won't do, and what we could add next**
 
 Hi,
 
@@ -32,13 +32,15 @@ The first version of your support assistant is ready for you to try. Here is a s
 - After **3 wrong verification attempts**, the chat stops sharing information and passes the case to your team.
 - Refunds for subscriptions are **prorated** as described above, and a refund always **cancels** the subscription or order.
 
-## What we need from you before launch
+## What we could add next to make it a reliable, trusted chatbot
 1. **Your sign-off on the rules above**, or any changes you want.
-2. **What it can promise about follow-up.** If you have a standard reply time, we can use it.
-3. **Your own wording** for the common fixes: how to cancel a subscription, how long holds take to drop off, and what counts as proof for a missing parcel.
-4. **A trial run.** Have two or three of your agents try it for a day and tell us anything that feels off, in tone or in decisions.
+2. **Follow-up wording.** If you have a standard reply time, the assistant can quote it instead of the general "a specialist will follow up by email".
+3. **Your approved wording** for the common fixes: how to cancel a subscription, how long holds take to drop off, and what counts as proof for a missing parcel.
+4. **A shadow trial with your team.** Two or three of your agents run it alongside their normal work and flag anything that feels off, in tone or in decisions.
+5. **Ongoing review of real chats**, with new cases added to the test set whenever something goes wrong.
+6. **Monitoring** of refunds, escalations and blocked attempts, so problems show up early.
 
-In our latest test run it handled all 26 of our practice conversations correctly. We will keep reviewing real chats after launch.
+In our latest test run it handled all 26 of our practice conversations correctly.
 
 Thanks,
 Priyansh
