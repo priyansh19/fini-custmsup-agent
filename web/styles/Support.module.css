@@ -160,4 +160,12 @@
 .tcall::before { content:'●'; font-size:9px; color:var(--mute); }
 .tcGood::before { color:#3dff9e; } .tcBad::before { color:var(--coral); }
 .tcBad span { color:#ffb3aa; }
-@media (max-width: 700px) { .modePill { display:none; } .modeSwitch button small { display:none; } }
+.briefToggle { margin-left:10px; display:flex; align-items:center; gap:8px; font-size:13px; padding:6px 12px 6px 6px; border-radius:999px; cursor:pointer;
+  border:1px solid var(--line); color:var(--mute); background:transparent; transition:.25s; }
+.briefToggle .knob { position:relative; width:30px; height:18px; border-radius:999px; background:rgba(255,255,255,.12); transition:.25s; }
+.briefToggle .knob::after { content:''; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:var(--mute); transition:.25s; }
+.briefToggleOn { color:#1a1030; font-weight:600; border-color:transparent; background:linear-gradient(135deg,var(--amber),#ffd98f); box-shadow:0 0 18px rgba(255,198,92,.35); }
+.briefToggleOn .knob { background:rgba(26,16,48,.35); }
+.briefToggleOn .knob::after { left:14px; background:#1a1030; }
+.rulesPanel { margin-bottom:18px; }
+@media (max-width: 700px) { .briefToggle { font-size:12px; } }
