@@ -27,6 +27,7 @@ from .agent import normalize_txn_id, sanitize_reply, MAX_STEPS, MAX_USER_CHARS, 
 
 MODES = ("expanded", "brief")
 AUTO_LIMIT, MAX_AGE_DAYS, FRAUD_HUMAN_OVER, MAX_FAILED = 75.00, 30, 500.00, 3
+CANCEL_RE = re.compile(r"\bcancel(?:s|led|ling|lation)?\b|\bstop (?:this|the|that) (?:charge|payment)\b|\breverse (?:this|the|that|it)\b", re.I)
 FRAUD_RE = re.compile(r"fraud|unauthori[sz]ed|stol(e|en)|didn'?t (make|authori[sz]e)|did not (make|authori[sz]e)|wasn'?t me|not me|hacked|someone (used|took|charged)", re.I)
 
 BRIEF_RULES = [
@@ -51,6 +52,17 @@ def default_mode() -> str:
     return m if m in MODES else "expanded"
 
 
+def txn_calendar_date(raw) -> date:
+    """Calendar date of a transaction in the policy's reference calendar: the recorded date part,
+    with no UTC/elapsed-hours arithmetic. '2026-09-12T23:59:59Z' is 12 Sep, whatever the hour."""
+    return date.fromisoformat(str(raw).strip()[:10])
+
+
+def age_days(t: dict, today: date | None = None) -> int:
+    """Brief rule 'under 30 days old' = calendar-day difference < 30 (revision 2)."""
+    return ((today or TODAY) - txn_calendar_date(t["date"])).days
+
+
 def brief_refund_allowed(store: Store, session: dict, txn_id: str, amount: float) -> tuple[bool, str]:
     """Deterministic brief policy. Order: verification, ownership, frozen, already refunded,
     pending, full-amount-only, $75 on the original amount, age."""
@@ -69,7 +81,7 @@ def brief_refund_allowed(store: Store, session: dict, txn_id: str, amount: float
         return False, "partial_not_allowed_full_amount_only"
     if t["amount"] > AUTO_LIMIT:
         return False, "over_75_escalate"
-    if (TODAY - date.fromisoformat(t["date"])).days >= MAX_AGE_DAYS:
+    if age_days(t) >= MAX_AGE_DAYS:
         return False, "30_plus_days_escalate"
     return True, "ok"
 
@@ -81,7 +93,8 @@ POLICY (Paylane brief; follow exactly)
 - Verification: before discussing ANY account detail, the customer must give the email on file AND the card's last 4 digits. Then call get_customer(email); the system checks the last 4 from the chat. If verified is false, say the details don't match (or ask for what's missing) and share nothing. Never reveal full card numbers, the last 4, or the email.
 - Refunds: auto-approve only if the customer is verified, the transaction is under 30 days old and the ORIGINAL transaction amount is $75 or less. Refunds are for the full transaction amount only: no partial refunds. Pending charges can't be refunded (they haven't settled). Never refund the same transaction twice.
 - If the customer asks for part of a charge, say you can only refund the full amount and ask whether they want that; refund only after they agree.
-- Pending charge: say it can't be refunded until it settles. Don't escalate and don't mention a specialist.
+- Pending charge: it can't be refunded until it settles. If the customer reports it as fraud or asks to cancel it immediately, it goes to a human (escalate_to_human; the system may already have done it). Otherwise just explain; don't escalate.
+- After any handoff to a human, take no further account action (refunds) on that issue for the rest of the chat; the system enforces this.
 - Over $75, or 30+ days old: don't refund; escalate_to_human and tell the customer a specialist will follow up by email.
 - Frozen card: explain why it's frozen (freeze_reason), say you can't unfreeze it, and escalate_to_human. No refunds on a frozen card.
 - Legal action, fraud over $500, or account closure: escalate_to_human. Don't refund.
@@ -144,7 +157,25 @@ class BriefAgent:
         self.session[key] = True
         res = TOOLS["escalate_to_human"](self.store, customer_id=customer_id, summary=summary)
         self.store.calls.append(("escalate_to_human", {"customer_id": customer_id, "summary": summary, "auto": True}, res))
+        self._record_handoff(summary)
         return {"escalation": "created", "ticket_id": res["ticket_id"], "tell_customer": "A specialist will follow up by email."}
+
+    def _touch(self, tid):
+        self.session.setdefault("turn_txns", {})[tid] = self.session.get("turn", 0)
+
+    def _record_handoff(self, summary):
+        """Revision 2: persistent stop after a handoff, kept in the signed state. The issue = transactions
+        named in the summary + transactions handled this turn; if none, the whole conversation."""
+        s = self.session
+        ids = {normalize_txn_id(m) for m in re.findall(r"(?i)\btxn[\s_-]*\d{4,6}\b", summary)}
+        ids |= {k for k, v in s.get("turn_txns", {}).items() if v == s.get("turn", 0)}
+        if ids:
+            s["handoff_txns"] = sorted(set(s.get("handoff_txns", [])) | ids)
+        else:
+            s["handoff_all"] = True
+
+    def _handed_off(self, tid):
+        return bool(self.session.get("handoff_all")) or tid in self.session.get("handoff_txns", [])
 
     def _session_note(self):
         s = self.session
@@ -201,12 +232,23 @@ class BriefAgent:
                 res = {"error": "not_found"}
             else:
                 res = {k: t[k] for k in ("amount", "date", "merchant", "status")}
+                self._touch(tid)
                 ok, why = brief_refund_allowed(self.store, s, tid, t["amount"])
                 if ok and s.get("fraud_claim"):
                     ok, why = False, "fraud_claim_escalate"
                 if s.get("fraud_claim") and t["amount"] > FRAUD_HUMAN_OVER:
                     why = "fraud_over_500_human"
+                handoff = None
+                if t["status"] == "pending" and (s.get("fraud_claim") or s.get("cancel_request")):
+                    # Revision 2: pending is never refunded, but fraud / immediate-cancellation still go to a human
+                    why = "pending_fraud_escalate" if s.get("fraud_claim") else "pending_cancellation_escalate"
+                    handoff = f"{tid} pending ${t['amount']:.2f} {t['merchant']}: " + (
+                        "customer reports fraud" if s.get("fraud_claim") else "customer asks to cancel immediately") + "; pending charges can't be refunded by the agent."
+                if self._handed_off(tid):
+                    ok, why = False, "handed_off_to_human"
                 res["refund_check"] = {"eligible": ok, "reason": why, "full_amount": t["amount"]}
+                if handoff:
+                    res.update(self._escalate(s["customer_id"], handoff))
         elif name == "issue_refund":
             tid = normalize_txn_id(args.get("txn_id", ""))
             try:
@@ -218,8 +260,11 @@ class BriefAgent:
             t = self.store.transactions.get(tid) or {}
             last_user = next((str(m.get("content", "")) for m in reversed(self.messages) if m.get("role") == "user"), "")
             asked = [float(x.replace(",", "")) for x in re.findall(r"\$\s?(\d[\d,]*(?:\.\d+)?)", last_user)]
+            self._touch(tid)
             if s["verification_locked"]:
                 ok, why = False, "verification_locked"
+            elif self._handed_off(tid):
+                ok, why = False, "handed_off_to_human"   # revision 2: persistent stop after a handoff
             elif ok and asked and t and all(abs(a - t["amount"]) > 1e-9 for a in asked):
                 ok, why = False, "partial_requested_offer_full_amount_first"   # customer asked for part: offer full, wait for yes
             elif ok and s.get("fraud_claim"):
@@ -228,6 +273,7 @@ class BriefAgent:
         elif name == "escalate_to_human":
             args = {"customer_id": s.get("customer_id") or "unverified", "summary": str(args.get("summary", ""))[:1000]}
             res = TOOLS["escalate_to_human"](self.store, **args)
+            self._record_handoff(args["summary"])
         else:
             res = {"error": f"unknown_tool {name} (brief mode exposes only the 4 spec tools)"}
         self.store.calls.append((name, args, res))
@@ -237,6 +283,8 @@ class BriefAgent:
         user_text = (user_text or "")[:MAX_USER_CHARS]
         if FRAUD_RE.search(user_text):
             self.session["fraud_claim"] = True   # [Interpretation] fraud claims are never auto-refunded
+        if CANCEL_RE.search(user_text):
+            self.session["cancel_request"] = True
         self.messages.append({"role": "user", "content": user_text})
         self.session["turn"] = self.session.get("turn", 0) + 1
         deadline = time.monotonic() + TURN_BUDGET_S
