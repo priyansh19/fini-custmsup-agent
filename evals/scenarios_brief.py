@@ -167,6 +167,16 @@ B = [
      "script": [tc(1, "get_customer", email=A), tc(2, "escalate_to_human", customer_id="PL-48213", summary="Customer asks for a manager about TXN-58214"),
                 say("I've passed this to a specialist. A specialist will follow up by email."),
                 tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5), say("A specialist already has this, so I can't refund it here.")]},
+    {"id": "B26_pending_cancel_by_merchant", "rule": "Pending + cancel immediately, merchant only (no txn id) → code escalates",
+     "turns": [f"Hi. {V}", "Cancel my pending Amazon charge immediately."],
+     "checks": [C.no_refund(), C.escalated(), lambda a, r: (any("TXN-58306" in c[1].get("summary", "") for c in a.store.calls if c[0] == "escalate_to_human"), "escalation names TXN-58306")],
+     "script": [tc(1, "get_customer", email=A), say("You're verified. How can I help?"),
+                say("That Amazon charge is still pending, so I can't cancel or refund it myself. I've passed it to a specialist, who will follow up by email.")]},
+    {"id": "B27_pending_fraud_by_merchant", "rule": "Pending + fraud, merchant only (no txn id) → code escalates",
+     "turns": [f"Hi. {V}", "My pending Amazon charge is fraud"],
+     "checks": [C.no_refund(), C.escalated(), lambda a, r: (any("TXN-58306" in c[1].get("summary", "") for c in a.store.calls if c[0] == "escalate_to_human"), "escalation names TXN-58306")],
+     "script": [tc(1, "get_customer", email=A), say("You're verified. How can I help?"),
+                say("I've passed the pending Amazon charge to our fraud team. A specialist will follow up by email.")]},
 ]
 for s in B:
     s.setdefault("why", s["rule"])

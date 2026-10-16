@@ -163,3 +163,33 @@ def test_boundary_trace_all_pass(tmp_path, monkeypatch):
     import evals.brief_trace as bt
     monkeypatch.setattr(bt, "OUT", tmp_path)
     assert bt.main()
+
+
+# ---- Revision 2 follow-up (Oct 16): pending charge named by merchant only, no txn id ----
+@pytest.mark.parametrize("msg,reason", [
+    ("Cancel my pending Amazon charge immediately.", "pending_cancellation_escalate"),
+    ("My pending Amazon charge is fraud", "pending_fraud_escalate"),
+])
+def test_pending_by_merchant_escalates_without_txn_id(msg, reason):
+    # turn 1 verifies; turn 2 is the exact live message; the model only answers in text (as in the failed live run)
+    a = BriefAgent(ScriptedProvider([_tc(1, "get_customer", email="amara.okafor@maplecrest.test"), _say("Verified, how can I help?"),
+                                     _say("I can't cancel pending charges. Would you like me to escalate?")]))
+    a.send(V); a.send(msg)
+    esc = [c for c in a.store.calls if c[0] == "escalate_to_human"]
+    assert len(esc) == 1 and "TXN-58306" in esc[0][1]["summary"] and esc[0][1]["auto"]
+    assert a.session["pending_handoffs"]["TXN-58306"]["reason"] == reason and not a.store.refunds
+    assert "HANDOFF ALREADY CREATED" in a._session_note()
+
+
+def test_pending_by_merchant_same_message_as_credentials():
+    a = BriefAgent(ScriptedProvider([_tc(1, "get_customer", email="amara.okafor@maplecrest.test"), _say("ok")]))
+    a.send(f"Cancel my pending Amazon charge immediately. {V}")
+    gc = [c for c in a.store.calls if c[0] == "get_customer"][0][2]
+    assert gc["pending_handoff"][0]["txn_id"] == "TXN-58306"
+    assert len([c for c in a.store.calls if c[0] == "escalate_to_human"]) == 1
+
+
+def test_plain_pending_by_merchant_not_escalated():
+    a = BriefAgent(ScriptedProvider([_tc(1, "get_customer", email="amara.okafor@maplecrest.test"), _say("ok"), _say("Pending, can't refund yet.")]))
+    a.send(V); a.send("Refund my pending Amazon charge.")
+    assert not [c for c in a.store.calls if c[0] == "escalate_to_human"]

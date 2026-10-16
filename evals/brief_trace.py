@@ -101,6 +101,22 @@ case("T6", "Pending + fraud claim (Amazon TXN-58306, pending)", "no refund; esca
 case("T7", "Pending + immediate cancellation (Amazon TXN-58306)", "no refund; escalated to a human")(_pending("Cancel the Amazon charge TXN-58306 immediately.", "pending_cancellation_escalate"))
 
 
+def _merchant_only(msg, reason):
+    def f():
+        a, r = run([(f"Hi. {V}", [tc(1, "get_customer", email=A), say("You're verified. How can I help?")]),
+                    (msg, [say("I can't cancel pending charges. Would you like me to escalate?")])], via_signed_state=True)
+        esc = calls(a, "escalate_to_human")
+        code = {"txn_id_in_message": False, "resolved_by_merchant": list((a.session.get("pending_handoffs") or {}).keys()),
+                "pending_handoffs": a.session.get("pending_handoffs"), "escalations": [c[1] for c in esc]}
+        return a, r, code, len(esc) == 1 and "TXN-58306" in esc[0][1]["summary"] and \
+            a.session["pending_handoffs"]["TXN-58306"]["reason"] == reason and not refunds(a)
+    return f
+
+
+case("T8", "Pending + cancel, merchant only: 'Cancel my pending Amazon charge immediately.'", "code resolves TXN-58306 by merchant and escalates, even though the model only asks")(_merchant_only("Cancel my pending Amazon charge immediately.", "pending_cancellation_escalate"))
+case("T9", "Pending + fraud, merchant only: 'My pending Amazon charge is fraud'", "code resolves TXN-58306 by merchant and escalates")(_merchant_only("My pending Amazon charge is fraud", "pending_fraud_escalate"))
+
+
 def main():
     OUT.mkdir(exist_ok=True)
     rows, data = [], []

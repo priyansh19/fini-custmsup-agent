@@ -93,7 +93,8 @@ POLICY (Paylane brief; follow exactly)
 - Verification: before discussing ANY account detail, the customer must give the email on file AND the card's last 4 digits. Then call get_customer(email); the system checks the last 4 from the chat. If verified is false, say the details don't match (or ask for what's missing) and share nothing. Never reveal full card numbers, the last 4, or the email.
 - Refunds: auto-approve only if the customer is verified, the transaction is under 30 days old and the ORIGINAL transaction amount is $75 or less. Refunds are for the full transaction amount only: no partial refunds. Pending charges can't be refunded (they haven't settled). Never refund the same transaction twice.
 - If the customer asks for part of a charge, say you can only refund the full amount and ask whether they want that; refund only after they agree.
-- Pending charge: it can't be refunded until it settles. If the customer reports it as fraud or asks to cancel it immediately, it goes to a human (escalate_to_human; the system may already have done it). Otherwise just explain; don't escalate.
+- Pending charge: it can't be refunded until it settles. If the customer reports a pending charge as fraud or asks to cancel it immediately (with or without a transaction ID), it MUST go to a human: the system escalates it automatically and lists it under HANDOFF ALREADY CREATED. Tell them a specialist will follow up by email. Never ask "would you like me to escalate?". If no handoff is listed yet, call escalate_to_human yourself. A plain refund request on a pending charge: just explain; don't escalate.
+- When policy says a case goes to a human, escalate; don't ask permission first.
 - After any handoff to a human, take no further account action (refunds) on that issue for the rest of the chat; the system enforces this.
 - Over $75, or 30+ days old: don't refund; escalate_to_human and tell the customer a specialist will follow up by email.
 - Frozen card: explain why it's frozen (freeze_reason), say you can't unfreeze it, and escalate_to_human. No refunds on a frozen card.
@@ -177,13 +178,44 @@ class BriefAgent:
     def _handed_off(self, tid):
         return bool(self.session.get("handoff_all")) or tid in self.session.get("handoff_txns", [])
 
+    def _pending_handoffs(self):
+        """Fraud / cancel-immediately about a PENDING charge escalates in code, with or without a txn id:
+        resolve the charge from the customer's transactions by txn id or merchant name mentioned in chat."""
+        s = self.session
+        if not s.get("verified") or s.get("verification_locked") or not (s.get("fraud_claim") or s.get("cancel_request")):
+            return []
+        text = " ".join(str(m.get("content", "")) for m in self.messages if m.get("role") == "user")
+        low, words = text.lower(), set(re.findall(r"[a-z0-9+']+", text.lower()))
+        ids = {normalize_txn_id(m) for m in re.findall(r"(?i)\btxn[\s_-]*\d{4,6}\b", text)}
+        out = []
+        for tid, t in self.store.transactions.items():
+            if t["customer_id"] != s["customer_id"] or t["status"] != "pending":
+                continue
+            tokens = [w for w in re.findall(r"[a-z0-9+']+", t["merchant"].lower()) if len(w) >= 3 and w not in ("the", "inc", "hotels", "store")]
+            if tid in ids or any(w in words for w in tokens):
+                kind = "fraud" if s.get("fraud_claim") else "cancellation"
+                summary = (f"{tid} pending ${t['amount']:.2f} {t['merchant']}: " +
+                           ("customer reports fraud" if kind == "fraud" else "customer asks to cancel immediately") +
+                           "; pending charges can't be refunded by the agent.")
+                self._touch(tid)
+                esc = self._escalate(s["customer_id"], summary)
+                done = s.setdefault("pending_handoffs", {})
+                if tid not in done and esc.get("ticket_id"):
+                    done[tid] = {"merchant": t["merchant"], "amount": t["amount"], "reason": f"pending_{kind}_escalate", "ticket_id": esc["ticket_id"]}
+                if tid in done:
+                    out.append({"txn_id": tid, **done[tid]})
+        return out
+
     def _session_note(self):
         s = self.session
         v = ("LOCKED after 3 failed verification attempts; share nothing." if s.get("verification_locked") else
              f"VERIFIED as {s['customer_id']}; don't ask for details again." if s.get("verified") else
              f"NOT verified ({s.get('failed_verifications', 0)} failed attempts).")
         r = ", ".join(f"{x['txn_id']} ${x['amount']}" for x in self.store.refunds.values()) or "none"
-        return f"\n\nSESSION STATE (authoritative): customer {v} Refunds this chat: {r}."
+        h = s.get("pending_handoffs") or {}
+        hn = (" HANDOFF ALREADY CREATED by the system for " + ", ".join(f"{k} ({x['merchant']} ${x['amount']:.2f}, pending, ticket {x['ticket_id']})" for k, x in h.items()) +
+              ": tell the customer it's pending so you can't refund or cancel it yourself, and that a specialist will follow up by email. Don't ask whether to escalate." if h else "")
+        return f"\n\nSESSION STATE (authoritative): customer {v} Refunds this chat: {r}.{hn}"
 
     # ---- tools
     def _run_tool(self, name, args):
@@ -216,6 +248,10 @@ class BriefAgent:
                     res = {"id": rec["id"], "name": rec["name"], "status": rec["status"], "verified": True}
                     if rec["status"] == "frozen":
                         res.update(freeze_reason=rec["freeze_reason"], **self._escalate(rec["id"], "Frozen card: customer contacted support; agent can't unfreeze."))
+                    else:
+                        hand = self._pending_handoffs()
+                        if hand:
+                            res["pending_handoff"] = hand
                 else:   # same answer whether the email exists or not: no account enumeration
                     s["failed_verifications"] += 1
                     res = {"verified": False}
@@ -244,10 +280,13 @@ class BriefAgent:
                     why = "pending_fraud_escalate" if s.get("fraud_claim") else "pending_cancellation_escalate"
                     handoff = f"{tid} pending ${t['amount']:.2f} {t['merchant']}: " + (
                         "customer reports fraud" if s.get("fraud_claim") else "customer asks to cancel immediately") + "; pending charges can't be refunded by the agent."
-                if self._handed_off(tid):
+                prior = (s.get("pending_handoffs") or {}).get(tid)
+                if self._handed_off(tid) and not (handoff or prior):
                     ok, why = False, "handed_off_to_human"
                 res["refund_check"] = {"eligible": ok, "reason": why, "full_amount": t["amount"]}
-                if handoff:
+                if prior:
+                    res.update(escalation="created", ticket_id=prior["ticket_id"], tell_customer="A specialist will follow up by email.")
+                elif handoff:
                     res.update(self._escalate(s["customer_id"], handoff))
         elif name == "issue_refund":
             tid = normalize_txn_id(args.get("txn_id", ""))
@@ -287,6 +326,7 @@ class BriefAgent:
             self.session["cancel_request"] = True
         self.messages.append({"role": "user", "content": user_text})
         self.session["turn"] = self.session.get("turn", 0) + 1
+        self._pending_handoffs()   # already-verified chats: escalate a pending fraud/cancel claim before the model replies
         deadline = time.monotonic() + TURN_BUDGET_S
         for _ in range(MAX_STEPS):
             if time.monotonic() > deadline:

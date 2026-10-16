@@ -23,12 +23,12 @@ The two modes are scored separately. **Expanded mode** is the submitted version:
 ### Scores: brief-only mode
 | Layer | Result |
 |---|---|
-| Unit tests (`tests/test_brief_mode.py`: policy table, no rolling cap, 4-tool surface, mode switch, state round-trip, calendar-date age, handoff stop, pending handoffs, boundary trace, 25 scenarios) | **57/57** (revision 1: 40/40) |
-| Scripted eval, 25 scenarios (`python -m evals.run --scripted --mode brief`) | **25/25** (revision 1: 22/22) |
-| Boundary trace (`python -m evals.brief_trace` → `traces/brief_boundaries.md`) | **7/7** |
+| Unit tests (`tests/test_brief_mode.py`: policy table, no rolling cap, 4-tool surface, mode switch, state round-trip, calendar-date age, handoff stop, pending handoffs, boundary trace, 27 scenarios) | **63/63** (revision 1: 40/40) |
+| Scripted eval, 27 scenarios (`python -m evals.run --scripted --mode brief`) | **27/27** (revision 1: 22/22) |
+| Boundary trace (`python -m evals.brief_trace` → `traces/brief_boundaries.md`) | **9/9** |
 | Real-model eval | Not run: offline evaluation only, as agreed |
 
-The whole suite passes 125/125 under both `PAYLANE_POLICY_MODE=expanded` and `PAYLANE_POLICY_MODE=brief`.
+The whole suite passes 131/131 under both `PAYLANE_POLICY_MODE=expanded` and `PAYLANE_POLICY_MODE=brief`.
 
 ### Brief-only scenarios (`evals/scenarios_brief.py`)
 The scripted model deliberately attempts refunds the brief forbids. These checks confirm that code blocks them, with the exact reason.
@@ -58,6 +58,8 @@ The scripted model deliberately attempts refunds the brief forbids. These checks
 | B23 | Pending + fraud claim [revision 2] | No refund; escalated |
 | B24 | Pending + immediate cancellation [revision 2] | No refund; escalated |
 | B25 | Stop after handoff, across turns [revision 2] | Turn-2 refund blocked `handed_off_to_human` |
+| B26 | Pending + cancel immediately, merchant only, no txn ID [revision 2] | Code finds TXN-58306 and escalates |
+| B27 | Pending + fraud, merchant only, no txn ID [revision 2] | Code finds TXN-58306 and escalates |
 
 ### Brief-only mode revision 2 (Oct 16), per reviewer feedback
 [`traces/brief_boundaries.md`](../traces/brief_boundaries.md) records each boundary with its tool calls and code-level checks. It runs offline: scripted provider, no model calls.
@@ -69,10 +71,11 @@ The scripted model deliberately attempts refunds the brief forbids. These checks
 | T5 | Stop after handoff: each turn is rebuilt from the HMAC-signed state, as in `/api/chat` | Turn-2 refund blocked `handed_off_to_human` |
 | T6 | Pending + fraud | `pending_fraud_escalate`, escalated, no refund |
 | T7 | Pending + immediate cancellation | `pending_cancellation_escalate`, escalated, no refund |
+| T8 / T9 | Pending + cancel / fraud named by merchant only ("Cancel my pending Amazon charge immediately.", "My pending Amazon charge is fraud"). The scripted model only asks "would you like me to escalate?" | Code finds TXN-58306 by merchant and escalates; no refund |
 
 ```bash
-python -m evals.run --scripted --mode brief      # 25/25, writes transcripts/scripted/brief/
-python -m evals.brief_trace                      # 7/7, writes traces/brief_boundaries.{md,json}
+python -m evals.run --scripted --mode brief      # 27/27, writes transcripts/scripted/brief/
+python -m evals.brief_trace                      # 9/9, writes traces/brief_boundaries.{md,json}
 PAYLANE_POLICY_MODE=brief pytest -q tests        # whole suite under the brief default
 ```
 
