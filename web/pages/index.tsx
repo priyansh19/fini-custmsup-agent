@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import s from '../styles/Support.module.css';
 import { useChat } from '../lib/useChat';
+import Spotlight from '../components/Spotlight';
 
 type Txn = { id: string; merchant: string; amount: number; date: string; status: string; hint: string };
 type Persona = { id: string; name: string; email: string; last4: string; status: string; transactions: Txn[] };
@@ -58,6 +59,10 @@ export default function Support() {
     const u = new URL(window.location.href); u.searchParams.set('mode', m); window.history.replaceState(null, '', u.toString());
   };
   useEffect(() => { if (window.innerWidth >= 900) setOpen(true); }, []);
+  // Onboarding spotlight on every full page load (not on in-page toggles: the page doesn't remount)
+  const switchRef = useRef<HTMLButtonElement>(null);
+  const [spot, setSpot] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setSpot(true), 400); return () => clearTimeout(t); }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chat.messages, chat.loading]);
 
   const p = shown.personas.find(x => x.id === persona) || shown.personas[0];
@@ -80,7 +85,7 @@ export default function Support() {
           <a>Cards</a><a>Payments</a><a className={s.active}>Help</a>
         </div>
         <Link href="/admin" className={s.devLink}>Developer view ⚙</Link>
-        <button role="switch" aria-checked={brief} className={`${s.briefToggle} ${brief ? s.briefToggleOn : ''}`}
+        <button ref={switchRef} role="switch" aria-checked={brief} className={`${s.briefToggle} ${brief ? s.briefToggleOn : ''}`}
           onClick={() => switchMode(brief ? 'expanded' : 'brief')} title="Brief-only mode: Deepak's brief exactly">
           <span className={s.knob} aria-hidden />Brief-only mode
         </button>
@@ -155,6 +160,11 @@ export default function Support() {
         </aside>
       </main>
 
+      {spot && (
+        <Spotlight target={switchRef} title="Two ways to review this agent"
+          body="Brief-only mode follows the original Paylane brief exactly. Turn it off to see the Expanded version (as submitted) with our added policies."
+          primary="Try brief mode" onPrimary={() => switchMode('brief')} onClose={() => setSpot(false)} />
+      )}
       <footer className={s.footer}>Demo for the Fini take-home · mock data only · <Link href="/admin">Developer / evaluator view</Link></footer>
 
       {/* Messenger widget */}
