@@ -4,7 +4,7 @@ import Link from 'next/link';
 import styles from '../styles/Home.module.css';
 import { useChat, Message, ToolCall } from '../lib/useChat';
 
-interface Config { model: string; provider: string; temperature: number; maxTokens: number; policy_mode: 'expanded'; }
+interface Config { model: string; provider: string; temperature: number; maxTokens: number; }
 
 // Server allowlist (api/chat.py ALLOWED_MODELS): anything else falls back to the production model.
 const MODELS = [
@@ -58,7 +58,6 @@ export default function Home() {
     model: 'openai/gpt-4o-mini', provider: 'OpenRouter',
     temperature: 0,      // default: deterministic, consistent answers
     maxTokens: 4096,     // default: plenty for multi-turn chats
-    policy_mode: 'expanded', // developer view runs the expanded version (as submitted); the help page defaults to brief
   });
   const [testResults, setTestResults] = useState<any[] | null>(null);
   const [testing, setTesting] = useState(false);
@@ -123,7 +122,6 @@ export default function Home() {
         <div className={styles.topRight}>
           <span className={styles.chip}><span className={`${styles.dot} ${loading ? styles.dotBusy : demoMode ? styles.dotDemo : styles.dotLive}`} />{loading ? 'Thinking' : demoMode ? 'Demo mode' : 'Live'}</span>
           <span className={`${styles.chip} ${styles.hideSm}`}>◆ {modelName}</span>
-          <span className={styles.chip} title="Developer view always uses the expanded policy. Brief-only mode: help page (default)">Expanded (as submitted)</span>
           <button className={styles.ghostBtn} onClick={resetChat}>New chat</button>
           <button className={styles.iconBtn} onClick={() => setShowRight(v => !v)} aria-label="Toggle debug panel" title="Settings & debug">⚙</button>
         </div>
