@@ -117,6 +117,15 @@ case("T8", "Pending + cancel, merchant only: 'Cancel my pending Amazon charge im
 case("T9", "Pending + fraud, merchant only: 'My pending Amazon charge is fraud'", "code resolves TXN-58306 by merchant and escalates")(_merchant_only("My pending Amazon charge is fraud", "pending_fraud_escalate"))
 
 
+@case("T10", "Legal threat, model tries to refund in the same turn (seen live)", "code escalates on verification; refund blocked handed_off_to_human")
+def _t10():
+    a, r = run([(f"My lawyer is going to sue Paylane over my Spotify charge TXN-58214. {V}", [tc(1, "get_customer", email=A),
+                 tc(2, "get_transaction", customer_id="PL-48213", txn_id="TXN-58214"), tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5), say("Refunded!")])])
+    ir = calls(a, "issue_refund")[0][2]
+    code = {"mandatory_handoffs": a.session.get("mandatory_handoffs"), "handoff_txns": a.session.get("handoff_txns"), "issue_refund": ir}
+    return a, r, code, ir.get("reason") == "blocked_by_policy:handed_off_to_human" and not refunds(a) and bool(calls(a, "escalate_to_human"))
+
+
 def main():
     OUT.mkdir(exist_ok=True)
     rows, data = [], []

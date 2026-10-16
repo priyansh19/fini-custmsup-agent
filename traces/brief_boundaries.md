@@ -13,8 +13,9 @@ Offline run (scripted provider and code-level checks; no model calls). Policy re
 | T7 | Pending + immediate cancellation (Amazon TXN-58306) | no refund; escalated to a human | PASS |
 | T8 | Pending + cancel, merchant only: 'Cancel my pending Amazon charge immediately.' | code resolves TXN-58306 by merchant and escalates, even though the model only asks | PASS |
 | T9 | Pending + fraud, merchant only: 'My pending Amazon charge is fraud' | code resolves TXN-58306 by merchant and escalates | PASS |
+| T10 | Legal threat, model tries to refund in the same turn (seen live) | code escalates on verification; refund blocked handed_off_to_human | PASS |
 
-**9/9 pass.**
+**10/10 pass.**
 
 ## T1 · Day 29 by calendar date (Equinox, 2026-09-12)
 
@@ -222,3 +223,27 @@ Tool calls:
 
 - `get_customer({"email": "amara.okafor@maplecrest.test"})` → `{"id": "PL-48213", "name": "Amara Okafor", "status": "active", "verified": true}`
 - `escalate_to_human({"customer_id": "PL-48213", "summary": "TXN-58306 pending $15.00 Amazon: customer reports fraud; pending charges can't be refunded by the agent.", "auto": true})` → `{"ticket_id": "TK0001"}`
+
+## T10 · Legal threat, model tries to refund in the same turn (seen live)
+
+Code-level checks:
+```json
+{
+  "mandatory_handoffs": {
+    "legal": "TK0001"
+  },
+  "handoff_txns": [
+    "TXN-58214"
+  ],
+  "issue_refund": {
+    "ok": false,
+    "reason": "blocked_by_policy:handed_off_to_human"
+  }
+}
+```
+Tool calls:
+
+- `escalate_to_human({"customer_id": "PL-48213", "summary": "Legal action mentioned re TXN-58214; handled by a human.", "auto": true})` → `{"ticket_id": "TK0001"}`
+- `get_customer({"email": "amara.okafor@maplecrest.test"})` → `{"id": "PL-48213", "name": "Amara Okafor", "status": "active", "verified": true}`
+- `get_transaction({"customer_id": "PL-48213", "txn_id": "TXN-58214"})` → `{"amount": 42.5, "date": "2026-10-01", "merchant": "Spotify", "status": "settled", "refund_check": {"eligible": false, "reason": "handed_off_to_human", "full_amount": 42.5}}`
+- `issue_refund({"txn_id": "TXN-58214", "amount": 42.5})` → `{"ok": false, "reason": "blocked_by_policy:handed_off_to_human"}`

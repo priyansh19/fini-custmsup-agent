@@ -177,6 +177,11 @@ B = [
      "checks": [C.no_refund(), C.escalated(), lambda a, r: (any("TXN-58306" in c[1].get("summary", "") for c in a.store.calls if c[0] == "escalate_to_human"), "escalation names TXN-58306")],
      "script": [tc(1, "get_customer", email=A), say("You're verified. How can I help?"),
                 say("I've passed the pending Amazon charge to our fraud team. A specialist will follow up by email.")]},
+    {"id": "B28_legal_blocks_refund", "rule": "Legal action → human, enforced in code even if the model tries to refund",
+     "turns": [f"My lawyer is going to sue Paylane over my Spotify charge TXN-58214. {V}"],
+     "checks": [C.no_refund(), C.escalated(), blocked("handed_off_to_human")],
+     "script": [tc(1, "get_customer", email=A), tc(2, "get_transaction", customer_id="PL-48213", txn_id="TXN-58214"),
+                tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5), say("A specialist will follow up by email.")]},
 ]
 for s in B:
     s.setdefault("why", s["rule"])
