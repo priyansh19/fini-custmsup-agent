@@ -11,8 +11,10 @@ Offline run (scripted provider and code-level checks; no model calls). Policy re
 | T5 | Stop after handoff, across turns via the signed state | turn-2 refund blocked: handed_off_to_human | PASS |
 | T6 | Pending + fraud claim (Amazon TXN-58306, pending) | no refund; escalated to a human | PASS |
 | T7 | Pending + immediate cancellation (Amazon TXN-58306) | no refund; escalated to a human | PASS |
+| T8 | Pending + cancel, merchant only: 'Cancel my pending Amazon charge immediately.' | code resolves TXN-58306 by merchant and escalates, even though the model only asks | PASS |
+| T9 | Pending + fraud, merchant only: 'My pending Amazon charge is fraud' | code resolves TXN-58306 by merchant and escalates | PASS |
 
-**7/7 pass.**
+**9/9 pass.**
 
 ## T1 · Day 29 by calendar date (Equinox, 2026-09-12)
 
@@ -130,8 +132,8 @@ Code-level checks:
 ```
 Tool calls:
 
-- `get_customer({"email": "amara.okafor@maplecrest.test"})` → `{"id": "PL-48213", "name": "Amara Okafor", "status": "active", "verified": true}`
 - `escalate_to_human({"customer_id": "PL-48213", "summary": "TXN-58306 pending $15.00 Amazon: customer reports fraud; pending charges can't be refunded by the agent.", "auto": true})` → `{"ticket_id": "TK0001"}`
+- `get_customer({"email": "amara.okafor@maplecrest.test"})` → `{"id": "PL-48213", "name": "Amara Okafor", "status": "active", "verified": true, "pending_handoff": [{"txn_id": "TXN-58306", "merchant": "Amazon", "amount": 15.0, "reason": "pending_fraud_escalate", "ticket_id": "TK0001"}]}`
 - `get_transaction({"customer_id": "PL-48213", "txn_id": "TXN-58306"})` → `{"amount": 15.0, "date": "2026-10-10", "merchant": "Amazon", "status": "pending", "refund_check": {"eligible": false, "reason": "pending_fraud_escalate", "full_amount": 15.0}, "escalation": "created", "ticket_id": "TK0001", "tell_customer": "A specialist will follow up by email."}`
 - `issue_refund({"txn_id": "TXN-58306", "amount": 15.0})` → `{"ok": false, "reason": "blocked_by_policy:handed_off_to_human"}`
 
@@ -154,7 +156,69 @@ Code-level checks:
 ```
 Tool calls:
 
-- `get_customer({"email": "amara.okafor@maplecrest.test"})` → `{"id": "PL-48213", "name": "Amara Okafor", "status": "active", "verified": true}`
 - `escalate_to_human({"customer_id": "PL-48213", "summary": "TXN-58306 pending $15.00 Amazon: customer asks to cancel immediately; pending charges can't be refunded by the agent.", "auto": true})` → `{"ticket_id": "TK0001"}`
+- `get_customer({"email": "amara.okafor@maplecrest.test"})` → `{"id": "PL-48213", "name": "Amara Okafor", "status": "active", "verified": true, "pending_handoff": [{"txn_id": "TXN-58306", "merchant": "Amazon", "amount": 15.0, "reason": "pending_cancellation_escalate", "ticket_id": "TK0001"}]}`
 - `get_transaction({"customer_id": "PL-48213", "txn_id": "TXN-58306"})` → `{"amount": 15.0, "date": "2026-10-10", "merchant": "Amazon", "status": "pending", "refund_check": {"eligible": false, "reason": "pending_cancellation_escalate", "full_amount": 15.0}, "escalation": "created", "ticket_id": "TK0001", "tell_customer": "A specialist will follow up by email."}`
 - `issue_refund({"txn_id": "TXN-58306", "amount": 15.0})` → `{"ok": false, "reason": "blocked_by_policy:handed_off_to_human"}`
+
+## T8 · Pending + cancel, merchant only: 'Cancel my pending Amazon charge immediately.'
+
+Code-level checks:
+```json
+{
+  "txn_id_in_message": false,
+  "resolved_by_merchant": [
+    "TXN-58306"
+  ],
+  "pending_handoffs": {
+    "TXN-58306": {
+      "merchant": "Amazon",
+      "amount": 15.0,
+      "reason": "pending_cancellation_escalate",
+      "ticket_id": "TK0001"
+    }
+  },
+  "escalations": [
+    {
+      "customer_id": "PL-48213",
+      "summary": "TXN-58306 pending $15.00 Amazon: customer asks to cancel immediately; pending charges can't be refunded by the agent.",
+      "auto": true
+    }
+  ]
+}
+```
+Tool calls:
+
+- `get_customer({"email": "amara.okafor@maplecrest.test"})` → `{"id": "PL-48213", "name": "Amara Okafor", "status": "active", "verified": true}`
+- `escalate_to_human({"customer_id": "PL-48213", "summary": "TXN-58306 pending $15.00 Amazon: customer asks to cancel immediately; pending charges can't be refunded by the agent.", "auto": true})` → `{"ticket_id": "TK0001"}`
+
+## T9 · Pending + fraud, merchant only: 'My pending Amazon charge is fraud'
+
+Code-level checks:
+```json
+{
+  "txn_id_in_message": false,
+  "resolved_by_merchant": [
+    "TXN-58306"
+  ],
+  "pending_handoffs": {
+    "TXN-58306": {
+      "merchant": "Amazon",
+      "amount": 15.0,
+      "reason": "pending_fraud_escalate",
+      "ticket_id": "TK0001"
+    }
+  },
+  "escalations": [
+    {
+      "customer_id": "PL-48213",
+      "summary": "TXN-58306 pending $15.00 Amazon: customer reports fraud; pending charges can't be refunded by the agent.",
+      "auto": true
+    }
+  ]
+}
+```
+Tool calls:
+
+- `get_customer({"email": "amara.okafor@maplecrest.test"})` → `{"id": "PL-48213", "name": "Amara Okafor", "status": "active", "verified": true}`
+- `escalate_to_human({"customer_id": "PL-48213", "summary": "TXN-58306 pending $15.00 Amazon: customer reports fraud; pending charges can't be refunded by the agent.", "auto": true})` → `{"ticket_id": "TK0001"}`

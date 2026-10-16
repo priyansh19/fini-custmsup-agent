@@ -353,18 +353,6 @@
     ],
     "tool_calls": [
       {
-        "name": "get_customer",
-        "arguments": {
-          "email": "amara.okafor@maplecrest.test"
-        },
-        "result": {
-          "id": "PL-48213",
-          "name": "Amara Okafor",
-          "status": "active",
-          "verified": true
-        }
-      },
-      {
         "name": "escalate_to_human",
         "arguments": {
           "customer_id": "PL-48213",
@@ -373,6 +361,27 @@
         },
         "result": {
           "ticket_id": "TK0001"
+        }
+      },
+      {
+        "name": "get_customer",
+        "arguments": {
+          "email": "amara.okafor@maplecrest.test"
+        },
+        "result": {
+          "id": "PL-48213",
+          "name": "Amara Okafor",
+          "status": "active",
+          "verified": true,
+          "pending_handoff": [
+            {
+              "txn_id": "TXN-58306",
+              "merchant": "Amazon",
+              "amount": 15.0,
+              "reason": "pending_fraud_escalate",
+              "ticket_id": "TK0001"
+            }
+          ]
         }
       },
       {
@@ -434,18 +443,6 @@
     ],
     "tool_calls": [
       {
-        "name": "get_customer",
-        "arguments": {
-          "email": "amara.okafor@maplecrest.test"
-        },
-        "result": {
-          "id": "PL-48213",
-          "name": "Amara Okafor",
-          "status": "active",
-          "verified": true
-        }
-      },
-      {
         "name": "escalate_to_human",
         "arguments": {
           "customer_id": "PL-48213",
@@ -454,6 +451,27 @@
         },
         "result": {
           "ticket_id": "TK0001"
+        }
+      },
+      {
+        "name": "get_customer",
+        "arguments": {
+          "email": "amara.okafor@maplecrest.test"
+        },
+        "result": {
+          "id": "PL-48213",
+          "name": "Amara Okafor",
+          "status": "active",
+          "verified": true,
+          "pending_handoff": [
+            {
+              "txn_id": "TXN-58306",
+              "merchant": "Amazon",
+              "amount": 15.0,
+              "reason": "pending_cancellation_escalate",
+              "ticket_id": "TK0001"
+            }
+          ]
         }
       },
       {
@@ -486,6 +504,126 @@
         "result": {
           "ok": false,
           "reason": "blocked_by_policy:handed_off_to_human"
+        }
+      }
+    ]
+  },
+  {
+    "id": "T8",
+    "title": "Pending + cancel, merchant only: 'Cancel my pending Amazon charge immediately.'",
+    "expected": "code resolves TXN-58306 by merchant and escalates, even though the model only asks",
+    "pass": true,
+    "code_checks": {
+      "txn_id_in_message": false,
+      "resolved_by_merchant": [
+        "TXN-58306"
+      ],
+      "pending_handoffs": {
+        "TXN-58306": {
+          "merchant": "Amazon",
+          "amount": 15.0,
+          "reason": "pending_cancellation_escalate",
+          "ticket_id": "TK0001"
+        }
+      },
+      "escalations": [
+        {
+          "customer_id": "PL-48213",
+          "summary": "TXN-58306 pending $15.00 Amazon: customer asks to cancel immediately; pending charges can't be refunded by the agent.",
+          "auto": true
+        }
+      ]
+    },
+    "turns": [
+      "Hi. amara.okafor@maplecrest.test, card 6417",
+      "Cancel my pending Amazon charge immediately."
+    ],
+    "replies": [
+      "You're verified. How can I help?",
+      "I can't cancel pending charges. Would you like me to escalate?"
+    ],
+    "tool_calls": [
+      {
+        "name": "get_customer",
+        "arguments": {
+          "email": "amara.okafor@maplecrest.test"
+        },
+        "result": {
+          "id": "PL-48213",
+          "name": "Amara Okafor",
+          "status": "active",
+          "verified": true
+        }
+      },
+      {
+        "name": "escalate_to_human",
+        "arguments": {
+          "customer_id": "PL-48213",
+          "summary": "TXN-58306 pending $15.00 Amazon: customer asks to cancel immediately; pending charges can't be refunded by the agent.",
+          "auto": true
+        },
+        "result": {
+          "ticket_id": "TK0001"
+        }
+      }
+    ]
+  },
+  {
+    "id": "T9",
+    "title": "Pending + fraud, merchant only: 'My pending Amazon charge is fraud'",
+    "expected": "code resolves TXN-58306 by merchant and escalates",
+    "pass": true,
+    "code_checks": {
+      "txn_id_in_message": false,
+      "resolved_by_merchant": [
+        "TXN-58306"
+      ],
+      "pending_handoffs": {
+        "TXN-58306": {
+          "merchant": "Amazon",
+          "amount": 15.0,
+          "reason": "pending_fraud_escalate",
+          "ticket_id": "TK0001"
+        }
+      },
+      "escalations": [
+        {
+          "customer_id": "PL-48213",
+          "summary": "TXN-58306 pending $15.00 Amazon: customer reports fraud; pending charges can't be refunded by the agent.",
+          "auto": true
+        }
+      ]
+    },
+    "turns": [
+      "Hi. amara.okafor@maplecrest.test, card 6417",
+      "My pending Amazon charge is fraud"
+    ],
+    "replies": [
+      "You're verified. How can I help?",
+      "I can't cancel pending charges. Would you like me to escalate?"
+    ],
+    "tool_calls": [
+      {
+        "name": "get_customer",
+        "arguments": {
+          "email": "amara.okafor@maplecrest.test"
+        },
+        "result": {
+          "id": "PL-48213",
+          "name": "Amara Okafor",
+          "status": "active",
+          "verified": true
+        }
+      },
+      {
+        "name": "escalate_to_human",
+        "arguments": {
+          "customer_id": "PL-48213",
+          "summary": "TXN-58306 pending $15.00 Amazon: customer reports fraud; pending charges can't be refunded by the agent.",
+          "auto": true
+        },
+        "result": {
+          "ticket_id": "TK0001"
         }
       }
     ]
