@@ -1,0 +1,22 @@
+.root { position:fixed; inset:0; z-index:100; }
+.catcher { position:absolute; inset:0; cursor:default; }
+.hole { position:fixed; border-radius:999px; pointer-events:none; box-shadow:0 0 0 9999px rgba(7,5,26,.64), 0 0 0 2px rgba(255,198,92,.85), 0 0 28px 6px rgba(255,198,92,.35);
+  transition:top .2s, left .2s, width .2s, height .2s; animation:fadeIn .25s ease both; }
+.card { position:fixed; padding:18px 18px 16px; border-radius:20px; color:#f1efff; font-family:'Inter',system-ui,sans-serif;
+  background:linear-gradient(160deg,rgba(255,198,92,.14),rgba(24,21,64,.97) 42%); border:1px solid rgba(255,198,92,.45);
+  box-shadow:0 24px 60px rgba(0,0,0,.55); animation:pop .3s cubic-bezier(.2,.9,.3,1.2) both; }
+.arrow { position:absolute; top:-8px; width:16px; height:16px; transform:rotate(45deg); background:#3a2f3e; border-left:1px solid rgba(255,198,92,.45); border-top:1px solid rgba(255,198,92,.45); }
+.kicker { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#ffc65c; margin-bottom:6px; }
+.card h2 { margin:0 0 8px; font:700 18px/1.25 'Space Grotesk',system-ui,sans-serif; }
+.card p { margin:0 0 16px; font-size:14px; line-height:1.55; color:#cfcaf2; }
+.actions { display:flex; justify-content:flex-end; gap:8px; }
+.actions button { padding:9px 14px; border-radius:12px; font-size:13.5px; font-weight:600; cursor:pointer; transition:.2s; }
+.ghost { background:transparent; color:#a6a2d6; border:1px solid rgba(160,150,255,.25); }
+.ghost:hover { color:#f1efff; border-color:rgba(160,150,255,.5); }
+.primary { border:0; color:#1a1030; background:linear-gradient(135deg,#ffc65c,#ffe1a3); box-shadow:0 8px 22px rgba(255,198,92,.3); }
+.primary:hover { transform:translateY(-1px); }
+.actions button:focus-visible { outline:2px solid #2ee6c5; outline-offset:2px; }
+@keyframes fadeIn { from { opacity:0; } }
+@keyframes pop { from { opacity:0; transform:translateY(-6px) scale(.97); } }
+@media (max-width:560px) { .card { padding:16px; } .actions button { flex:1; } }
+@media (prefers-reduced-motion: reduce) { .hole, .card { animation:none; transition:none; } }
