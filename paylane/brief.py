@@ -27,6 +27,8 @@ from .agent import normalize_txn_id, sanitize_reply, MAX_STEPS, MAX_USER_CHARS, 
 
 MODES = ("expanded", "brief")
 AUTO_LIMIT, MAX_AGE_DAYS, FRAUD_HUMAN_OVER, MAX_FAILED = 75.00, 30, 500.00, 3
+LEGAL_RE = re.compile(r"\b(lawyers?|attorneys?|solicitors?|sue|suing|lawsuit|legal action|court|litigation)\b", re.I)
+CLOSURE_RE = re.compile(r"\b(close|closing|shut|delete|terminate)\b[^.!?]{0,30}\baccount\b|\baccount (closure|deletion)\b", re.I)
 CANCEL_RE = re.compile(r"\bcancel(?:s|led|ling|lation)?\b|\bstop (?:this|the|that) (?:charge|payment)\b|\breverse (?:this|the|that|it)\b", re.I)
 FRAUD_RE = re.compile(r"fraud|unauthori[sz]ed|stol(e|en)|didn'?t (make|authori[sz]e)|did not (make|authori[sz]e)|wasn'?t me|not me|hacked|someone (used|took|charged)", re.I)
 
@@ -178,6 +180,33 @@ class BriefAgent:
     def _handed_off(self, tid):
         return bool(self.session.get("handoff_all")) or tid in self.session.get("handoff_txns", [])
 
+    def _mandatory_handoffs(self):
+        """Brief: legal action, fraud over $500 and account closure go to a human. Enforced in code once the
+        customer is verified: escalate automatically (once) and stop account actions on that issue."""
+        s = self.session
+        if not s.get("verified") or s.get("verification_locked"):
+            return
+        text = " ".join(str(m.get("content", "")) for m in self.messages if m.get("role") == "user")
+        ids = sorted({normalize_txn_id(m) for m in re.findall(r"(?i)\btxn[\s_-]*\d{4,6}\b", text)}
+                     & {k for k, t in self.store.transactions.items() if t["customer_id"] == s["customer_id"]})
+        named = (" re " + ", ".join(ids)) if ids else ""
+        reasons = []
+        if s.get("legal_claim"):
+            reasons.append(("legal", f"Legal action mentioned{named}; handled by a human."))
+        if s.get("closure_request"):
+            reasons.append(("closure", "Account closure request; handled by a human."))
+        big = [i for i in ids if self.store.transactions[i]["amount"] > FRAUD_HUMAN_OVER]
+        if s.get("fraud_claim") and big:
+            reasons.append(("fraud500", f"Fraud claim over $500 re {', '.join(big)}; handled by a human."))
+        done = s.setdefault("mandatory_handoffs", {})
+        for kind, summary in reasons:
+            if kind in done:
+                continue
+            esc = self._escalate(s["customer_id"], summary)
+            done[kind] = esc.get("ticket_id")
+            if kind == "closure" or not ids:
+                s["handoff_all"] = True
+
     def _pending_handoffs(self):
         """Fraud / cancel-immediately about a PENDING charge escalates in code, with or without a txn id:
         resolve the charge from the customer's transactions by txn id or merchant name mentioned in chat."""
@@ -212,10 +241,13 @@ class BriefAgent:
              f"VERIFIED as {s['customer_id']}; don't ask for details again." if s.get("verified") else
              f"NOT verified ({s.get('failed_verifications', 0)} failed attempts).")
         r = ", ".join(f"{x['txn_id']} ${x['amount']}" for x in self.store.refunds.values()) or "none"
+        mh = s.get("mandatory_handoffs") or {}
+        mtxt = (" HANDOFF ALREADY CREATED by the system (" + ", ".join(f"{k}: ticket {v}" for k, v in mh.items()) +
+                "): take no account action on it, don't refund it; tell the customer a specialist will follow up by email." if mh else "")
         h = s.get("pending_handoffs") or {}
         hn = (" HANDOFF ALREADY CREATED by the system for " + ", ".join(f"{k} ({x['merchant']} ${x['amount']:.2f}, pending, ticket {x['ticket_id']})" for k, x in h.items()) +
               ": tell the customer it's pending so you can't refund or cancel it yourself, and that a specialist will follow up by email. Don't ask whether to escalate." if h else "")
-        return f"\n\nSESSION STATE (authoritative): customer {v} Refunds this chat: {r}.{hn}"
+        return f"\n\nSESSION STATE (authoritative): customer {v} Refunds this chat: {r}.{mtxt}{hn}"
 
     # ---- tools
     def _run_tool(self, name, args):
@@ -249,6 +281,7 @@ class BriefAgent:
                     if rec["status"] == "frozen":
                         res.update(freeze_reason=rec["freeze_reason"], **self._escalate(rec["id"], "Frozen card: customer contacted support; agent can't unfreeze."))
                     else:
+                        self._mandatory_handoffs()
                         hand = self._pending_handoffs()
                         if hand:
                             res["pending_handoff"] = hand
@@ -324,8 +357,13 @@ class BriefAgent:
             self.session["fraud_claim"] = True   # [Interpretation] fraud claims are never auto-refunded
         if CANCEL_RE.search(user_text):
             self.session["cancel_request"] = True
+        if LEGAL_RE.search(user_text):
+            self.session["legal_claim"] = True
+        if CLOSURE_RE.search(user_text):
+            self.session["closure_request"] = True
         self.messages.append({"role": "user", "content": user_text})
         self.session["turn"] = self.session.get("turn", 0) + 1
+        self._mandatory_handoffs()
         self._pending_handoffs()   # already-verified chats: escalate a pending fraud/cancel claim before the model replies
         deadline = time.monotonic() + TURN_BUDGET_S
         for _ in range(MAX_STEPS):

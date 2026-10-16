@@ -81,15 +81,16 @@ The agent ships with two policy modes, side by side, so the brief and the extend
 
 | Scores, labelled by mode | Unit tests | Scripted eval (offline) | Real-model eval |
 |---|---|---|---|
-| **Brief-only mode** (revision 2, Oct 16) | **63/63** (`tests/test_brief_mode.py`) | **27/27** (`--mode brief`) + [boundary trace](traces/brief_boundaries.md) **9/9** | Not run: offline evaluation only, as agreed |
+| **Brief-only mode** (revision 2, Oct 16) | **68/68** (`tests/test_brief_mode.py`) | **28/28** (`--mode brief`) + [boundary trace](traces/brief_boundaries.md) **10/10** | Not run: offline evaluation only, as agreed |
 | **Expanded mode** (submitted) | **68/68** | **26/26** | **26/26** on `openai/gpt-4o-mini` (2026-10-14) |
 
-The full suite is 131/131 with either `PAYLANE_POLICY_MODE` setting. Revision 1 (Oct 15) scored 40/40 unit tests and 22/22 scripted.
+The full suite is 136/136 with either `PAYLANE_POLICY_MODE` setting. Revision 1 (Oct 15) scored 40/40 unit tests and 22/22 scripted.
 
 **Brief-only mode revision 2 (Oct 16), per reviewer feedback.** These changes are brief mode only; expanded mode and its default are unchanged.
 - Transaction age is the calendar-date difference in the policy's reference calendar, so "under 30 days" means calendar days < 30. A charge at `2026-09-12T23:59:59Z` is day 29 and a charge at `2026-09-11T23:59:59Z` is day 30, whatever the elapsed hours.
 - After any `escalate_to_human` handoff, code stops refunds on that issue for the rest of the conversation. The stop is kept in the signed state, so it holds across turns.
 - Pending charges are still never refunded, and the handoffs still apply: a fraud claim or an immediate-cancellation request on a pending charge escalates to a human, automatically and in code. This holds even with no transaction ID: code finds the pending charge from the customer's transactions by merchant name ("Cancel my pending Amazon charge immediately.") and never asks whether to escalate.
+- Legal action, fraud over $500 and account closure go to a human in code: once the customer is verified, code raises the escalation itself and blocks refunds on that issue, even if the model tries to refund.
 - The help page now has a clear entry point: a "Reviewing against the original brief? Open brief-only mode" banner, plus the top-line links above.
 - [`traces/brief_boundaries.md`](traces/brief_boundaries.md) ([JSON](traces/brief_boundaries.json)) is an offline trace of exactly these boundaries: `python -m evals.brief_trace`.
 

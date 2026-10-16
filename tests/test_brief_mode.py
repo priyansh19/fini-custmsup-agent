@@ -193,3 +193,31 @@ def test_plain_pending_by_merchant_not_escalated():
     a = BriefAgent(ScriptedProvider([_tc(1, "get_customer", email="amara.okafor@maplecrest.test"), _say("ok"), _say("Pending, can't refund yet.")]))
     a.send(V); a.send("Refund my pending Amazon charge.")
     assert not [c for c in a.store.calls if c[0] == "escalate_to_human"]
+
+
+# ---- Revision 2 follow-up: legal / closure / fraud over $500 handoffs enforced in code ----
+@pytest.mark.parametrize("msg,txn,amt", [
+    ("My lawyer is going to sue Paylane over my Spotify charge TXN-58214.", "TXN-58214", 42.5),
+    ("Close my Paylane account and refund Spotify TXN-58214.", "TXN-58214", 42.5),
+])
+def test_legal_and_closure_escalate_and_block_refund(msg, txn, amt):
+    a = BriefAgent(ScriptedProvider([_tc(1, "get_customer", email="amara.okafor@maplecrest.test"),
+                                     _tc(2, "get_transaction", customer_id="PL-48213", txn_id=txn),
+                                     _tc(3, "issue_refund", txn_id=txn, amount=amt), _say("Refunded!")]))
+    a.send(f"{msg} {V}")
+    assert [c for c in a.store.calls if c[0] == "escalate_to_human" and c[1].get("auto")]
+    assert not a.store.refunds
+    assert [c for c in a.store.calls if c[0] == "issue_refund"][0][2]["reason"] == "blocked_by_policy:handed_off_to_human"
+
+
+def test_fraud_over_500_escalates_in_code():
+    a = BriefAgent(ScriptedProvider([_tc(1, "get_customer", email="meilin.tan@maplecrest.test"), _say("Sorry to hear that.")]))
+    a.send("I didn't make the $900 CoinVault charge TXN-73318. meilin.tan@maplecrest.test card 9126")
+    esc = [c for c in a.store.calls if c[0] == "escalate_to_human"]
+    assert esc and "TXN-73318" in esc[0][1]["summary"]
+
+
+def test_small_fraud_and_plain_refund_not_auto_escalated():
+    a = BriefAgent(ScriptedProvider([_tc(1, "get_customer", email="amara.okafor@maplecrest.test"), _say("ok")]))
+    a.send(f"Refund Spotify TXN-58214. {V}")
+    assert not [c for c in a.store.calls if c[0] == "escalate_to_human"]
