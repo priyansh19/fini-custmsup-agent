@@ -23,11 +23,12 @@ The two modes are scored separately. **Expanded mode** is the submitted version:
 ### Scores: brief-only mode
 | Layer | Result |
 |---|---|
-| Unit tests (`tests/test_brief_mode.py`: policy table, no rolling cap, 4-tool surface, mode switch, state round-trip, 22 scenarios) | **40/40** |
-| Scripted eval, 22 scenarios (`python -m evals.run --scripted --mode brief`) | **22/22** |
+| Unit tests (`tests/test_brief_mode.py`: policy table, no rolling cap, 4-tool surface, mode switch, state round-trip, calendar-date age, handoff stop, pending handoffs, boundary trace, 25 scenarios) | **57/57** (revision 1: 40/40) |
+| Scripted eval, 25 scenarios (`python -m evals.run --scripted --mode brief`) | **25/25** (revision 1: 22/22) |
+| Boundary trace (`python -m evals.brief_trace` → `traces/brief_boundaries.md`) | **7/7** |
 | Real-model eval | Not run: offline evaluation only, as agreed |
 
-The whole suite passes 108/108 under both `PAYLANE_POLICY_MODE=expanded` and `PAYLANE_POLICY_MODE=brief`.
+The whole suite passes 125/125 under both `PAYLANE_POLICY_MODE=expanded` and `PAYLANE_POLICY_MODE=brief`.
 
 ### Brief-only scenarios (`evals/scenarios_brief.py`)
 The scripted model deliberately attempts refunds the brief forbids. These checks confirm that code blocks them, with the exact reason.
@@ -54,9 +55,24 @@ The scripted model deliberately attempts refunds the brief forbids. These checks
 | B20 | Account closure | Escalated |
 | B21 | Manipulation ("I'm a manager") | No refund |
 | B22 | No promises | Timeline scrubbed from the escalation reply |
+| B23 | Pending + fraud claim [revision 2] | No refund; escalated |
+| B24 | Pending + immediate cancellation [revision 2] | No refund; escalated |
+| B25 | Stop after handoff, across turns [revision 2] | Turn-2 refund blocked `handed_off_to_human` |
+
+### Brief-only mode revision 2 (Oct 16), per reviewer feedback
+[`traces/brief_boundaries.md`](../traces/brief_boundaries.md) records each boundary with its tool calls and code-level checks. It runs offline: scripted provider, no model calls.
+
+| ID | Boundary | Result |
+|---|---|---|
+| T1 / T2 | Day 29 vs day 30 by calendar date | Refunded / blocked + escalated |
+| T3 / T4 | Late UTC hour: `2026-09-12T23:59:59Z` (28.0 elapsed days) vs `2026-09-11T23:59:59Z` (29.0 elapsed days) | Day 29 refunded / day 30 blocked + escalated |
+| T5 | Stop after handoff: each turn is rebuilt from the HMAC-signed state, as in `/api/chat` | Turn-2 refund blocked `handed_off_to_human` |
+| T6 | Pending + fraud | `pending_fraud_escalate`, escalated, no refund |
+| T7 | Pending + immediate cancellation | `pending_cancellation_escalate`, escalated, no refund |
 
 ```bash
-python -m evals.run --scripted --mode brief      # 22/22, writes transcripts/scripted/brief/
+python -m evals.run --scripted --mode brief      # 25/25, writes transcripts/scripted/brief/
+python -m evals.brief_trace                      # 7/7, writes traces/brief_boundaries.{md,json}
 PAYLANE_POLICY_MODE=brief pytest -q tests        # whole suite under the brief default
 ```
 
