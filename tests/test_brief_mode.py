@@ -67,3 +67,99 @@ def test_state_roundtrip():
 def test_brief_scenario_scripted(sc):
     _, _, results = run_scenario(sc, ScriptedProvider(sc["script"]), "brief")
     assert all(r[0] for r in results), [m for g, m in results if not g]
+
+
+# ---- Revision 2 (Oct 16), per reviewer feedback ----
+from paylane.brief import age_days, txn_calendar_date
+from datetime import date
+
+
+def _store_with(**txns):
+    st = Store()
+    for tid, (amt, d, status) in txns.items():
+        st.transactions[tid] = {"customer_id": "PL-48213", "amount": amt, "date": d, "merchant": "Test", "status": status}
+    return st
+
+
+@pytest.mark.parametrize("raw,age,ok", [
+    ("2026-09-12", 29, True), ("2026-09-11", 30, False),
+    ("2026-09-12T23:59:59Z", 29, True),          # late UTC hour: still 12 Sep -> day 29
+    ("2026-09-12T00:00:01+05:30", 29, True),
+    ("2026-09-11T23:59:59Z", 30, False),          # 30 calendar days even if < 30*24h elapsed
+    ("2026-09-11T00:00:00Z", 30, False),
+])
+def test_calendar_date_age(raw, age, ok):
+    st = _store_with(**{"TXN-90001": (20.0, raw, "settled")})
+    assert age_days(st.transactions["TXN-90001"]) == age
+    assert brief_refund_allowed(st, dict(S), "TXN-90001", 20.0)[0] is ok
+
+
+def test_calendar_date_parser():
+    assert txn_calendar_date("2026-09-12T23:59:59Z") == date(2026, 9, 12)
+
+
+def _tc(i, name, **a):
+    return {"text": None, "tool_calls": [{"id": f"t{i}", "name": name, "arguments": a}]}
+
+
+def _say(t):
+    return {"text": t, "tool_calls": []}
+
+
+V = "amara.okafor@maplecrest.test 6417"
+
+
+def test_stop_after_handoff_persists_across_turns_and_state():
+    p = ScriptedProvider([_tc(1, "get_customer", email="amara.okafor@maplecrest.test"),
+                          _tc(2, "escalate_to_human", customer_id="PL-48213", summary="Customer disputes TXN-58214, wants a manager"),
+                          _say("Passed to a specialist.")])
+    a = BriefAgent(p); a.send(f"I want a manager about TXN-58214. {V}")
+    b = BriefAgent(ScriptedProvider([_tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5), _say("Can't.")]))
+    b.load_state(a.to_state())                     # next turn, fresh instance (serverless)
+    b.send("Just refund TXN-58214 now.")
+    r = [c for c in b.store.calls if c[0] == "issue_refund"][-1][2]
+    assert r == {"ok": False, "reason": "blocked_by_policy:handed_off_to_human"}
+    assert not b.store.refunds
+
+
+def test_handoff_without_txn_stops_all_account_actions():
+    a = BriefAgent(ScriptedProvider([_tc(1, "get_customer", email="amara.okafor@maplecrest.test"),
+                                     _tc(2, "escalate_to_human", customer_id="PL-48213", summary="Account closure request"),
+                                     _tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5), _say("ok")]))
+    a.send(f"Close my account. {V}")
+    assert a.session["handoff_all"] and not a.store.refunds
+
+
+def test_handoff_is_per_issue():
+    a = BriefAgent(ScriptedProvider([_tc(1, "get_customer", email="amara.okafor@maplecrest.test"),
+                                     _tc(2, "escalate_to_human", customer_id="PL-48213", summary="TXN-58241 over $75"),
+                                     _say("Escalated."), _tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5), _say("Done.")]))
+    a.send(f"Refund Zara TXN-58241. {V}"); a.send("Also refund Spotify TXN-58214.")
+    assert [r["txn_id"] for r in a.store.refunds.values()] == ["TXN-58214"]
+
+
+@pytest.mark.parametrize("msg,reason", [
+    ("Someone used my card for Amazon TXN-58306, I didn't make it.", "pending_fraud_escalate"),
+    ("Cancel the Amazon charge TXN-58306 immediately.", "pending_cancellation_escalate"),
+])
+def test_pending_handoffs_escalate(msg, reason):
+    a = BriefAgent(ScriptedProvider([_tc(1, "get_customer", email="amara.okafor@maplecrest.test"),
+                                     _tc(2, "get_transaction", customer_id="PL-48213", txn_id="TXN-58306"),
+                                     _tc(3, "issue_refund", txn_id="TXN-58306", amount=15), _say("Escalated.")]))
+    a.send(f"{msg} {V}")
+    gt = [c for c in a.store.calls if c[0] == "get_transaction"][0][2]
+    assert gt["refund_check"]["reason"] == reason and gt["escalation"] == "created"
+    assert [c for c in a.store.calls if c[0] == "escalate_to_human"] and not a.store.refunds
+
+
+def test_plain_pending_is_declined_not_escalated():
+    a = BriefAgent(ScriptedProvider([_tc(1, "get_customer", email="amara.okafor@maplecrest.test"),
+                                     _tc(2, "get_transaction", customer_id="PL-48213", txn_id="TXN-58306"), _say("Pending.")]))
+    a.send(f"Refund Amazon TXN-58306. {V}")
+    assert not [c for c in a.store.calls if c[0] == "escalate_to_human"] and not a.store.refunds
+
+
+def test_boundary_trace_all_pass(tmp_path, monkeypatch):
+    import evals.brief_trace as bt
+    monkeypatch.setattr(bt, "OUT", tmp_path)
+    assert bt.main()

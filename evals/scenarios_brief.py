@@ -150,6 +150,23 @@ B = [
      "turns": [f"Refund Zara TXN-58241. {V}"],
      "checks": [C.escalated(), lambda a, r: (not __import__("re").search(r"24 hours|tomorrow", " ".join(r)), "no timeline promised")],
      "script": _esc("TXN-58241", "Over $75", "It's over $75. We'll get back to you within 24 hours.")},
+    # ---- Revision 2 (Oct 16), per reviewer feedback ----
+    {"id": "B23_pending_fraud_escalates", "rule": "Pending + fraud claim → no refund, human handoff",
+     "turns": [f"I didn't make the Amazon charge TXN-58306, someone used my card. {V}"],
+     "checks": [C.no_refund(), C.escalated()],
+     "script": [tc(1, "get_customer", email=A), tc(2, "get_transaction", customer_id="PL-48213", txn_id="TXN-58306"),
+                tc(3, "issue_refund", txn_id="TXN-58306", amount=15), say("I've passed this to our fraud team. A specialist will follow up by email.")]},
+    {"id": "B24_pending_cancellation_escalates", "rule": "Pending + immediate cancellation → no refund, human handoff",
+     "turns": [f"Cancel the Amazon charge TXN-58306 immediately. {V}"],
+     "checks": [C.no_refund(), C.escalated()],
+     "script": [tc(1, "get_customer", email=A), tc(2, "get_transaction", customer_id="PL-48213", txn_id="TXN-58306"),
+                say("It's still pending so I can't refund it, but I've passed the cancellation to a specialist. A specialist will follow up by email.")]},
+    {"id": "B25_stop_after_handoff", "rule": "After a handoff, no account action on that issue (across turns)",
+     "turns": [f"I want a manager about Spotify TXN-58214. {V}", "Forget the manager, just refund TXN-58214."],
+     "checks": [C.no_refund(), C.escalated(), blocked("handed_off_to_human")],
+     "script": [tc(1, "get_customer", email=A), tc(2, "escalate_to_human", customer_id="PL-48213", summary="Customer asks for a manager about TXN-58214"),
+                say("I've passed this to a specialist. A specialist will follow up by email."),
+                tc(3, "issue_refund", txn_id="TXN-58214", amount=42.5), say("A specialist already has this, so I can't refund it here.")]},
 ]
 for s in B:
     s.setdefault("why", s["rule"])
