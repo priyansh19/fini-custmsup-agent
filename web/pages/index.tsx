@@ -40,8 +40,18 @@ export default function Support() {
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { const q = new URLSearchParams(window.location.search).get('mode'); if (q === 'brief' || q === 'expanded') setMode(q); }, []);
-  useEffect(() => { fetch(`/api/scenarios?mode=${mode}`).then(r => r.json()).then(d => d?.personas && setCat(d)).catch(() => {}); }, [mode]);
+  const [modeReady, setModeReady] = useState(false);
+  useEffect(() => { const q = new URLSearchParams(window.location.search).get('mode'); if (q === 'brief' || q === 'expanded') setMode(q); setModeReady(true); }, []);
+  // Fetch the catalog for the current mode only; a late response for the other mode is dropped,
+  // so brief and expanded cards can never mix (first load with ?mode=brief, or quick toggling).
+  useEffect(() => {
+    if (!modeReady) return;
+    let live = true;
+    fetch(`/api/scenarios?mode=${mode}`, { cache: 'no-store' }).then(r => r.json())
+      .then(d => { if (live && d?.personas && (d.mode || 'expanded') === mode) setCat(d); }).catch(() => {});
+    return () => { live = false; };
+  }, [mode, modeReady]);
+  const shown = brief ? (cat.mode === 'brief' ? cat : { ...FALLBACK, scenarios: [] }) : (cat.mode === 'brief' ? FALLBACK : cat);
   const switchMode = (m: Mode) => {
     if (m === mode) return;
     chat.reset(); setMode(m);
@@ -50,7 +60,7 @@ export default function Support() {
   useEffect(() => { if (window.innerWidth >= 900) setOpen(true); }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chat.messages, chat.loading]);
 
-  const p = cat.personas.find(x => x.id === persona) || cat.personas[0];
+  const p = shown.personas.find(x => x.id === persona) || shown.personas[0];
   const runScenario = (sc: Scenario) => { if (sc.persona) setPersona(sc.persona); setOpen(true); chat.send(sc.message); };
   const send = () => { const t = input.trim(); if (!t || chat.loading) return; setInput(''); chat.send(t); };
   const useMyDetails = () => { setOpen(true); setInput(`Hi, my email is ${p.email} and my card ends in ${p.last4}.`); setTimeout(() => inputRef.current?.focus(), 50); };
@@ -90,17 +100,17 @@ export default function Support() {
 
       <main className={s.grid}>
         <section className={s.topics}>
-        {brief && cat.rules && (
+        {brief && shown.rules && (
           <div className={s.rulesPanel}>
             <h2>Brief policy <span className={s.rulesBadge}>active</span></h2>
-            <ol>{cat.rules.map(r => <li key={r.id}>{r.rule}</li>)}</ol>
-            <div className={s.toolsRow}>{(cat.tools || []).map(t => <code key={t}>{t}</code>)}</div>
-            {cat.omitted && <div className={s.omitted}><span>Not in this mode:</span> {cat.omitted.join(' · ')}</div>}
+            <ol>{shown.rules.map(r => <li key={r.id}>{r.rule}</li>)}</ol>
+            <div className={s.toolsRow}>{(shown.tools || []).map(t => <code key={t}>{t}</code>)}</div>
+            {shown.omitted && <div className={s.omitted}><span>Not in this mode:</span> {shown.omitted.join(' · ')}</div>}
           </div>
         )}
           <h2>{brief ? 'Every rule in the brief' : 'Popular topics'} <small>tap to try it live</small></h2>
           <div className={s.cards}>
-            {cat.scenarios.map((sc, i) => (
+            {shown.scenarios.map((sc, i) => (
               <button key={sc.id} className={s.card} style={{ animationDelay: `${i * 50}ms` }} onClick={() => runScenario(sc)} disabled={chat.loading}>
                 <span className={s.emoji}>{sc.emoji}</span>
                 <b>{sc.title}</b>
@@ -115,7 +125,7 @@ export default function Support() {
         <aside className={s.personaBox}>
           <h2>Demo customer</h2>
           <div className={s.personaTabs}>
-            {cat.personas.map(x => (
+            {shown.personas.map(x => (
               <button key={x.id} className={`${s.ptab} ${x.id === persona ? s.ptabOn : ''}`} onClick={() => setPersona(x.id)}>
                 <span>{AVATAR[x.id] || '🙂'}</span>{x.name.split(' ')[0]}
               </button>
@@ -160,7 +170,7 @@ export default function Support() {
           <div className={`${s.row} ${s.agent}`}><div className={s.bubble}>Hi! 👋 I'm Paylane's support assistant. I can help with refunds, frozen cards and charges you don't recognise. To get started, share your <b>email</b> and your card's <b>last 4 digits</b>.</div></div>
           {chat.messages.length === 0 && (
             <div className={s.quick}>
-              {cat.scenarios.slice(0, 4).map(sc => <button key={sc.id} onClick={() => runScenario(sc)}>{sc.emoji} {sc.title}</button>)}
+              {shown.scenarios.slice(0, 4).map(sc => <button key={sc.id} onClick={() => runScenario(sc)}>{sc.emoji} {sc.title}</button>)}
             </div>
           )}
           {chat.messages.map((m, i) => (
