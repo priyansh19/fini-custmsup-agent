@@ -1,7 +1,7 @@
 """Brief-only mode: Deepak's original Paylane brief and nothing else.
 
-Selected with PAYLANE_POLICY_MODE=brief (or per request: {"policy_mode": "brief"}).
-The default stays "expanded" (paylane.agent.Agent), so live behaviour is unchanged.
+Default since revision 2 (Oct 16). The submitted expanded version (paylane.agent.Agent) is selected with
+PAYLANE_POLICY_MODE=expanded or per request {"policy_mode": "expanded"}.
 
 What brief mode keeps (all [From Deepak's brief]):
   * auto-refund only if: verified, transaction < 30 days old, ORIGINAL transaction amount <= $75
@@ -50,8 +50,9 @@ BRIEF_OMITS = ["Rolling $75 cap", "Subscription proration", "Refund-as-cancellat
 
 def default_mode() -> str:
     import os
-    m = (os.getenv("PAYLANE_POLICY_MODE") or "expanded").strip().lower()
-    return m if m in MODES else "expanded"
+    # Rev 2 (Oct 16): brief-only is the default; PAYLANE_POLICY_MODE=expanded or policy_mode="expanded" selects the submitted version
+    m = (os.getenv("PAYLANE_POLICY_MODE") or "brief").strip().lower()
+    return m if m in MODES else "brief"
 
 
 def txn_calendar_date(raw) -> date:

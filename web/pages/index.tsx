@@ -28,7 +28,7 @@ const FALLBACK: Catalog = {
 const AVATAR: Record<string, string> = { 'PL-48213': '👩🏾', 'PL-51907': '🧑🏽', 'PL-36642': '👩🏻‍💼' };
 
 export default function Support() {
-  const [mode, setMode] = useState<Mode>('expanded');
+  const [mode, setMode] = useState<Mode>('brief');   // rev 2 (Oct 16): brief-only is the default landing mode
   const config = useMemo(() => ({ policy_mode: mode }), [mode]);
   const chat = useChat(config);
   const [cat, setCat] = useState<Catalog>(FALLBACK);
@@ -82,13 +82,13 @@ export default function Support() {
         <Link href="/admin" className={s.devLink}>Developer view ⚙</Link>
         <button role="switch" aria-checked={brief} className={`${s.briefToggle} ${brief ? s.briefToggleOn : ''}`}
           onClick={() => switchMode(brief ? 'expanded' : 'brief')} title="Brief-only mode: Deepak's brief exactly">
-          <span className={s.knob} aria-hidden />Brief-only mode
+          <span className={s.knob} aria-hidden />{brief ? 'Brief-only mode' : 'Expanded (as submitted)'}
         </button>
       </nav>
 
-      {!brief && (
-        <a className={s.briefBanner} href="/?mode=brief" onClick={e => { e.preventDefault(); switchMode('brief'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-          <span>Reviewing against the original brief?</span><b>Open brief-only mode →</b>
+      {brief && (
+        <a className={s.briefBanner} href="/?mode=expanded" onClick={e => { e.preventDefault(); switchMode('expanded'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+          <span>Viewing the original brief.</span><b>See the expanded version (as submitted) →</b>
         </a>
       )}
       <header className={s.hero}>
