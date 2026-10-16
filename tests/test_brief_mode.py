@@ -48,12 +48,13 @@ def test_only_four_spec_tools():
 
 def test_mode_switch(monkeypatch):
     monkeypatch.delenv("PAYLANE_POLICY_MODE", raising=False)
-    assert default_mode() == "expanded" and isinstance(make_agent(None), Agent)
-    monkeypatch.setenv("PAYLANE_POLICY_MODE", "brief")
-    assert isinstance(make_agent(None), BriefAgent)
-    assert isinstance(make_agent(None, mode="expanded"), Agent)
+    assert default_mode() == "brief" and isinstance(make_agent(None), BriefAgent)   # rev 2: brief is the default
+    assert isinstance(make_agent(None, mode="expanded"), Agent)                      # explicit expanded still works
+    monkeypatch.setenv("PAYLANE_POLICY_MODE", "expanded")
+    assert isinstance(make_agent(None), Agent)
+    assert isinstance(make_agent(None, mode="brief"), BriefAgent)
     monkeypatch.setenv("PAYLANE_POLICY_MODE", "nonsense")
-    assert default_mode() == "expanded"
+    assert default_mode() == "brief"
 
 
 def test_state_roundtrip():

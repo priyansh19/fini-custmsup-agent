@@ -34,7 +34,7 @@ def run_case(url, case):
         return {"statuses": [status], "replies": [data.get("reply", "")], "tool_calls": data.get("tool_calls", []), "data": data}
     state, replies, statuses, calls = case.get("state"), [], [], []
     for turn in case["turns"]:
-        status, data = post(url, {"message": turn, "state": state})
+        status, data = post(url, {"message": turn, "state": state, "policy_mode": "expanded"})  # cases target the expanded version
         statuses.append(status); replies.append(data.get("reply") or data.get("error") or "")
         if status == 200:
             state = data.get("state"); calls = data.get("tool_calls", calls)
