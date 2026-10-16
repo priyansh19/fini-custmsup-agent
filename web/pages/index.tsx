@@ -76,6 +76,11 @@ export default function Support() {
         </button>
       </nav>
 
+      {!brief && (
+        <a className={s.briefBanner} href="/?mode=brief" onClick={e => { e.preventDefault(); switchMode('brief'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+          <span>Reviewing against the original brief?</span><b>Open brief-only mode →</b>
+        </a>
+      )}
       <header className={s.hero}>
         <div className={s.badge}>● Support is online · avg reply in seconds</div>
         <h1>Hi there, how can we <em>help?</em></h1>

@@ -169,3 +169,10 @@
 .briefToggleOn .knob::after { left:14px; background:#1a1030; }
 .rulesPanel { margin-bottom:18px; }
 @media (max-width: 700px) { .briefToggle { font-size:12px; } }
+
+.briefBanner { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:10px; max-width:640px; margin:4px auto 0; padding:10px 18px; border-radius:14px;
+  font-size:14px; text-decoration:none; color:var(--ink); background:linear-gradient(135deg,rgba(255,198,92,.16),rgba(139,123,255,.12)); border:1px solid rgba(255,198,92,.45);
+  box-shadow:0 0 22px rgba(255,198,92,.12); transition:.25s; animation:rise .5s ease both; }
+.briefBanner span { color:var(--mute); }
+.briefBanner b { color:var(--amber); }
+.briefBanner:hover { transform:translateY(-1px); border-color:var(--amber); box-shadow:0 0 28px rgba(255,198,92,.3); }
