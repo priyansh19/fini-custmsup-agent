@@ -4,7 +4,7 @@ An LLM customer-support agent for **Paylane**, a fintech handling cards, transfe
 
 **Live demo:** https://fini-custmsup-agent.vercel.app · **Developer view:** https://fini-custmsup-agent.vercel.app/admin
 
-**Brief-only mode is the default** (rev 2, Oct 16): **[/](https://fini-custmsup-agent.vercel.app/)** = Deepak's brief exactly · **[Expanded (as submitted)](https://fini-custmsup-agent.vercel.app/?mode=expanded)** at `/?mode=expanded` · [Brief vs expanded](#brief-only-mode-vs-expanded-mode) · [Boundary trace](traces/brief_boundaries.md)
+**Reviewing against the original brief?** Open **[brief-only mode](https://fini-custmsup-agent.vercel.app/?mode=brief)** · [Brief vs expanded](#brief-only-mode-vs-expanded-mode) · [Boundary trace](traces/brief_boundaries.md)
 Model: `openai/gpt-4o-mini` via OpenRouter.
 
 | Real-model eval | Scripted eval | Unit tests |
@@ -52,13 +52,12 @@ Full diagrams (service split, chat-turn sequence, refund-gate flowchart, verific
 The agent ships with two policy modes, side by side, so the brief and the extended design can be compared directly.
 
 - **Brief-only mode** runs Deepak's Paylane brief exactly: the 4 spec tools, full-transaction refunds only, eligibility on the original transaction amount, and nothing else.
-- **Expanded mode** is the submitted version: the brief plus the resolution-first extras. It is labelled **Expanded (as submitted)** and lives at `/?mode=expanded`, where it behaves exactly as submitted. Since revision 2 (Oct 16), brief-only mode is the default landing page.
+- **Expanded mode** is the submitted version: the brief plus the resolution-first extras. It stays the default, so the live demo behaves exactly as submitted.
 
 **Switching modes**
-- **Help page (rev 2, Oct 16):** `/` opens in **brief-only mode** with the switch on (`/?mode=brief` also works). Turn the switch off, use the "See the expanded version (as submitted) →" banner, or open `/?mode=expanded` for **Expanded (as submitted)**, which behaves exactly as submitted. In brief mode, the brief's rules panel, its 12 rule-tagged scenario cards, a Brief-only badge in the chat header and a live tool-call trace appear. Switching starts a new chat.
-- **API:** a bare `POST /api/chat` runs brief-only mode, matching the landing page. Send `{"message": "...", "policy_mode": "expanded"}` for the submitted version. A conversation keeps the mode it started in, because the mode is stored in the signed state.
-- **Server default:** `PAYLANE_POLICY_MODE=brief|expanded` (default `brief` since rev 2, Oct 16). The expanded test and eval suites select expanded explicitly (`--mode expanded` is the eval runner's default; the live harness sends `policy_mode: expanded`).
-- **Developer view:** `/admin` always runs **Expanded (as submitted)** and is labelled that way.
+- **Help page:** switch on **Brief-only mode** in the top navigation bar, or open `https://fini-custmsup-agent.vercel.app/?mode=brief`. With the switch off, the page is the expanded version exactly as submitted. With it on, the brief's rules panel, its 12 rule-tagged scenario cards, a Brief-only badge in the chat header and a live tool-call trace appear. Switching starts a new chat.
+- **API:** `POST /api/chat` with `{"message": "...", "policy_mode": "brief"}`. A conversation keeps the mode it started in, because the mode is stored in the signed state.
+- **Server default:** `PAYLANE_POLICY_MODE=brief|expanded` (the default is `expanded`).
 - **Evals:** `python -m evals.run --scripted --mode brief`
 
 | Rule | Brief-only mode | Expanded mode |
@@ -92,7 +91,7 @@ The full suite is 136/136 with either `PAYLANE_POLICY_MODE` setting. Revision 1 
 - After any `escalate_to_human` handoff, code stops refunds on that issue for the rest of the conversation. The stop is kept in the signed state, so it holds across turns.
 - Pending charges are still never refunded, and the handoffs still apply: a fraud claim or an immediate-cancellation request on a pending charge escalates to a human, automatically and in code. This holds even with no transaction ID: code finds the pending charge from the customer's transactions by merchant name ("Cancel my pending Amazon charge immediately.") and never asks whether to escalate.
 - Legal action, fraud over $500 and account closure go to a human in code: once the customer is verified, code raises the escalation itself and blocks refunds on that issue, even if the model tries to refund.
-- Brief-only mode is the default landing page (`/`) and the API default. A banner, "Viewing the original brief. See the expanded version (as submitted) →", links to `/?mode=expanded`; the switch reads "Expanded (as submitted)" when off.
+- The help page now has a clear entry point: a "Reviewing against the original brief? Open brief-only mode" banner, plus the top-line links above.
 - [`traces/brief_boundaries.md`](traces/brief_boundaries.md) ([JSON](traces/brief_boundaries.json)) is an offline trace of exactly these boundaries: `python -m evals.brief_trace`.
 
 | Brief-only mode: help page | Brief-only mode: refund with tool calls |
