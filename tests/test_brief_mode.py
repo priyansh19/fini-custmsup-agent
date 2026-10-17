@@ -70,8 +70,8 @@ def test_brief_scenario_scripted(sc):
 
 
 # ---- Revision 2 (Oct 16), per reviewer feedback ----
-from paylane.brief import age_days, txn_calendar_date
-from datetime import date
+from paylane.brief import age_days, txn_age, txn_timestamp_utc, REFERENCE_CLOCK_UTC, MAX_AGE
+from datetime import date, datetime, timedelta, timezone
 
 
 def _store_with(**txns):
@@ -81,21 +81,37 @@ def _store_with(**txns):
     return st
 
 
-@pytest.mark.parametrize("raw,age,ok", [
-    ("2026-09-12", 29, True), ("2026-09-11", 30, False),
-    ("2026-09-12T23:59:59Z", 29, True),          # late UTC hour: still 12 Sep -> day 29
-    ("2026-09-12T00:00:01+05:30", 29, True),
-    ("2026-09-11T23:59:59Z", 30, False),          # 30 calendar days even if < 30*24h elapsed
-    ("2026-09-11T00:00:00Z", 30, False),
+# Revision 3 (Oct 17): elapsed time from the UTC timestamp vs the fixed reference clock 2026-10-11T00:00:00Z.
+@pytest.mark.parametrize("raw,hours,ok", [
+    ("2026-09-12", 696, True),                      # date-only = 00:00:00Z
+    ("2026-09-11", 720, False),                     # date-only, exactly 720h
+    ("2026-09-11T00:01:00Z", 719 + 59 / 60, True),  # 719h59m qualifies
+    ("2026-09-11T00:00:01Z", 720 - 1 / 3600, True), # 719h59m59s qualifies
+    ("2026-09-11T00:00:00Z", 720, False),           # exactly 720h escalates
+    ("2026-09-10T23:59:59Z", 720 + 1 / 3600, False),# 720h + 1s escalates
+    ("2026-09-11T23:59:59Z", 696 + 1 / 3600, True), # late UTC hour: elapsed time, not calendar date
+    ("2026-09-11T05:30:00+05:30", 720, False),      # offset converted to UTC = 00:00:00Z
 ])
-def test_calendar_date_age(raw, age, ok):
+def test_elapsed_age_boundaries(raw, hours, ok):
     st = _store_with(**{"TXN-90001": (20.0, raw, "settled")})
-    assert age_days(st.transactions["TXN-90001"]) == age
+    assert abs(txn_age(st.transactions["TXN-90001"]).total_seconds() / 3600 - hours) < 1e-6
     assert brief_refund_allowed(st, dict(S), "TXN-90001", 20.0)[0] is ok
+    if not ok:
+        assert brief_refund_allowed(st, dict(S), "TXN-90001", 20.0)[1] == "30_plus_days_escalate"
 
 
-def test_calendar_date_parser():
-    assert txn_calendar_date("2026-09-12T23:59:59Z") == date(2026, 9, 12)
+def test_reference_clock_and_date_only_convention():
+    assert REFERENCE_CLOCK_UTC == datetime(2026, 10, 11, tzinfo=timezone.utc)
+    assert MAX_AGE == timedelta(hours=720)
+    assert txn_timestamp_utc("2026-09-12") == datetime(2026, 9, 12, 0, 0, 0, tzinfo=timezone.utc)
+    assert txn_timestamp_utc("2026-09-12T10:00:00") == datetime(2026, 9, 12, 10, tzinfo=timezone.utc)  # naive = UTC
+
+
+def test_reference_clock_ignores_wall_clock(monkeypatch):
+    import time as _t
+    monkeypatch.setattr(_t, "time", lambda: 4_000_000_000)
+    st = _store_with(**{"TXN-90001": (20.0, "2026-09-12", "settled")})
+    assert brief_refund_allowed(st, dict(S), "TXN-90001", 20.0)[0] is True
 
 
 def _tc(i, name, **a):

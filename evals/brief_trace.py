@@ -1,9 +1,9 @@
-"""Small boundary trace for brief-only mode revision 2 (offline: scripted provider + code-level checks).
+"""Small boundary trace for brief-only mode revision 3 (offline: scripted provider + code-level checks).
     python -m evals.brief_trace      # writes traces/brief_boundaries.{md,json}
 """
 import json, pathlib, sys, os
 from datetime import datetime, timezone
-from paylane.brief import BriefAgent, brief_refund_allowed, age_days
+from paylane.brief import BriefAgent, brief_refund_allowed, age_days, txn_age, txn_timestamp_utc, REFERENCE_CLOCK_UTC
 from paylane.data import TODAY
 from paylane.providers import ScriptedProvider
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "api"))
@@ -63,17 +63,18 @@ def _age_case(tid, raw, refundable):
                      tc(3, "issue_refund", txn_id=tid, amount=20.0)] + ([] if refundable else [tc(4, "escalate_to_human", customer_id="PL-48213", summary=f"{tid} is 30+ days old")]) + [say("ok")])],
                    setup=(lambda ag: inject(ag, tid, raw)) if tid.startswith("TXN-9") else None)
         t = a.store.transactions[tid]
-        code = {"txn_date": raw, "calendar_age_days": age_days(t), "policy_check": brief_refund_allowed(a.store, {"verified": True, "customer_id": "PL-48213"}, tid, 20.0) if not refunds(a) else "(refunded)"}
-        if "T" in raw: code["elapsed_days_utc"] = elapsed_days(raw)
+        code = {"txn_date": raw, "txn_timestamp_utc": txn_timestamp_utc(raw).isoformat(), "reference_clock_utc": REFERENCE_CLOCK_UTC.isoformat(), "elapsed": str(txn_age(t)), "elapsed_hours": round(txn_age(t).total_seconds() / 3600, 4), "policy_check": brief_refund_allowed(a.store, {"verified": True, "customer_id": "PL-48213"}, tid, 20.0) if not refunds(a) else "(refunded)"}
         ok = (bool(refunds(a)) == refundable) and (refundable or bool(calls(a, "escalate_to_human")))
         return a, r, code, ok
     return f
 
 
-case("T1", "Day 29 by calendar date (Equinox, 2026-09-12)", "refunded")(_age_case("TXN-57560", "2026-09-12", True))
-case("T2", "Day 30 by calendar date (Starbucks, 2026-09-11)", "blocked + escalated")(_age_case("TXN-57552", "2026-09-11", False))
-case("T3", "Late UTC hour, day 29: 2026-09-12T23:59:59Z", "refunded (calendar day 29; only 28.0 elapsed days)")(_age_case("TXN-90029", "2026-09-12T23:59:59Z", True))
-case("T4", "Late UTC hour, day 30: 2026-09-11T23:59:59Z", "blocked + escalated (calendar day 30, though only 29.0 elapsed days)")(_age_case("TXN-90030", "2026-09-11T23:59:59Z", False))
+case("T1", "Date-only 2026-09-12 (= 00:00:00Z): 696h elapsed", "refunded")(_age_case("TXN-57560", "2026-09-12", True))
+case("T2", "Date-only 2026-09-11 (= 00:00:00Z): exactly 720h", "blocked + escalated")(_age_case("TXN-57552", "2026-09-11", False))
+case("T3", "719h59m59s: 2026-09-11T00:00:01Z", "refunded (under 30 x 24h)")(_age_case("TXN-90029", "2026-09-11T00:00:01Z", True))
+case("T4", "Exactly 720h: 2026-09-11T00:00:00Z", "blocked + escalated")(_age_case("TXN-90030", "2026-09-11T00:00:00Z", False))
+case("T4b", "720h + 1s: 2026-09-10T23:59:59Z", "blocked + escalated")(_age_case("TXN-90031", "2026-09-10T23:59:59Z", False))
+case("T4c", "Late UTC hour 2026-09-11T23:59:59Z: 696h00m01s", "refunded (Rev 2 calendar rule escalated this; Rev 3 uses elapsed time)")(_age_case("TXN-90032", "2026-09-11T23:59:59Z", True))
 
 
 @case("T5", "Stop after handoff, across turns via the signed state", "turn-2 refund blocked: handed_off_to_human")
@@ -135,8 +136,10 @@ def main():
                      "turns": [m["content"] for m in a.messages if m["role"] == "user"], "replies": replies,
                      "tool_calls": [{"name": n, "arguments": ar, "result": rs} for n, ar, rs in a.store.calls]})
         rows.append((cid, title, expect, ok, code, a))
-    md = ["# Brief-only mode revision 2: boundary trace", "",
-          f"Offline run (scripted provider and code-level checks; no model calls). Policy reference date: {TODAY.isoformat()}. "
+    md = ["# Brief-only mode revision 3 (Oct 17): boundary trace", "",
+          f"Offline run (scripted provider and code-level checks; no model calls). Fixed reference clock: {REFERENCE_CLOCK_UTC.isoformat()} (never the wall clock). "
+          "Age = elapsed time from the UTC transaction timestamp; < 720h qualifies, >= 720h escalates. Date-only fixtures mean 00:00:00Z. "
+          "Revision 2 (Oct 16) used calendar-date age; revision 3 replaces it per reviewer feedback. "
           "Regenerate with `python -m evals.brief_trace`. Each scripted model deliberately attempts the refund, so every pass is enforced by code.", "",
           "| ID | Boundary | Expected | Result |", "|---|---|---|---|"]
     md += [f"| {c} | {t} | {e} | {'PASS' if ok else 'FAIL'} |" for c, t, e, ok, _, _ in rows]

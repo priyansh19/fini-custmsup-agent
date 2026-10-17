@@ -20,7 +20,7 @@ the model looks up with the card last 4 the customer typed in chat. The 3-strike
 part of "verify before discussing any account detail" and labelled [Interpretation].
 """
 import json, re, time
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from .data import Store, TODAY
 from .tools import TOOLS
 from .agent import normalize_txn_id, sanitize_reply, MAX_STEPS, MAX_USER_CHARS, TURN_BUDGET_S
@@ -54,15 +54,30 @@ def default_mode() -> str:
     return m if m in MODES else "expanded"
 
 
-def txn_calendar_date(raw) -> date:
-    """Calendar date of a transaction in the policy's reference calendar: the recorded date part,
-    with no UTC/elapsed-hours arithmetic. '2026-09-12T23:59:59Z' is 12 Sep, whatever the hour."""
-    return date.fromisoformat(str(raw).strip()[:10])
+# Revision 3 (Oct 17): elapsed time from the UTC transaction timestamp against a FIXED reference clock.
+# The reference clock is the seed data's TODAY at 00:00:00Z (never the wall clock), so results are deterministic.
+REFERENCE_CLOCK_UTC = datetime(TODAY.year, TODAY.month, TODAY.day, tzinfo=timezone.utc)   # 2026-10-11T00:00:00Z
+MAX_AGE = timedelta(days=MAX_AGE_DAYS)   # 30 x 24h = 720h; age >= 720h escalates
 
 
-def age_days(t: dict, today: date | None = None) -> int:
-    """Brief rule 'under 30 days old' = calendar-day difference < 30 (revision 2)."""
-    return ((today or TODAY) - txn_calendar_date(t["date"])).days
+def txn_timestamp_utc(raw) -> datetime:
+    """UTC timestamp of a transaction. Date-only convention: 'YYYY-MM-DD' means YYYY-MM-DDT00:00:00Z.
+    Timestamps with an offset are converted to UTC; naive timestamps are treated as UTC."""
+    s = str(raw).strip()
+    if len(s) == 10:
+        return datetime.fromisoformat(s + "T00:00:00+00:00")
+    dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt.astimezone(timezone.utc)
+
+
+def txn_age(t: dict, ref: datetime | None = None) -> timedelta:
+    """Elapsed time between the transaction's UTC timestamp and the fixed reference clock."""
+    return (ref or REFERENCE_CLOCK_UTC) - txn_timestamp_utc(t["date"])
+
+
+def age_days(t: dict, ref: datetime | None = None) -> float:
+    """Elapsed age in days (fractional), for display/trace. The rule itself compares txn_age() to 720h."""
+    return txn_age(t, ref).total_seconds() / 86400
 
 
 def brief_refund_allowed(store: Store, session: dict, txn_id: str, amount: float) -> tuple[bool, str]:
@@ -83,7 +98,7 @@ def brief_refund_allowed(store: Store, session: dict, txn_id: str, amount: float
         return False, "partial_not_allowed_full_amount_only"
     if t["amount"] > AUTO_LIMIT:
         return False, "over_75_escalate"
-    if age_days(t) >= MAX_AGE_DAYS:
+    if txn_age(t) >= MAX_AGE:   # revision 3: elapsed time vs fixed reference clock
         return False, "30_plus_days_escalate"
     return True, "ok"
 
