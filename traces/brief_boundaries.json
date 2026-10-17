@@ -1,12 +1,15 @@
 [
   {
     "id": "T1",
-    "title": "Day 29 by calendar date (Equinox, 2026-09-12)",
+    "title": "Date-only 2026-09-12 (= 00:00:00Z): 696h elapsed",
     "expected": "refunded",
     "pass": true,
     "code_checks": {
       "txn_date": "2026-09-12",
-      "calendar_age_days": 29,
+      "txn_timestamp_utc": "2026-09-12T00:00:00+00:00",
+      "reference_clock_utc": "2026-10-11T00:00:00+00:00",
+      "elapsed": "29 days, 0:00:00",
+      "elapsed_hours": 696.0,
       "policy_check": "(refunded)"
     },
     "turns": [
@@ -61,12 +64,15 @@
   },
   {
     "id": "T2",
-    "title": "Day 30 by calendar date (Starbucks, 2026-09-11)",
+    "title": "Date-only 2026-09-11 (= 00:00:00Z): exactly 720h",
     "expected": "blocked + escalated",
     "pass": true,
     "code_checks": {
       "txn_date": "2026-09-11",
-      "calendar_age_days": 30,
+      "txn_timestamp_utc": "2026-09-11T00:00:00+00:00",
+      "reference_clock_utc": "2026-10-11T00:00:00+00:00",
+      "elapsed": "30 days, 0:00:00",
+      "elapsed_hours": 720.0,
       "policy_check": [
         false,
         "30_plus_days_escalate"
@@ -134,14 +140,16 @@
   },
   {
     "id": "T3",
-    "title": "Late UTC hour, day 29: 2026-09-12T23:59:59Z",
-    "expected": "refunded (calendar day 29; only 28.0 elapsed days)",
+    "title": "719h59m59s: 2026-09-11T00:00:01Z",
+    "expected": "refunded (under 30 x 24h)",
     "pass": true,
     "code_checks": {
-      "txn_date": "2026-09-12T23:59:59Z",
-      "calendar_age_days": 29,
-      "policy_check": "(refunded)",
-      "elapsed_days_utc": 28.0
+      "txn_date": "2026-09-11T00:00:01Z",
+      "txn_timestamp_utc": "2026-09-11T00:00:01+00:00",
+      "reference_clock_utc": "2026-10-11T00:00:00+00:00",
+      "elapsed": "29 days, 23:59:59",
+      "elapsed_hours": 719.9997,
+      "policy_check": "(refunded)"
     },
     "turns": [
       "Refund TXN-90029. amara.okafor@maplecrest.test, card 6417"
@@ -170,7 +178,7 @@
         },
         "result": {
           "amount": 20.0,
-          "date": "2026-09-12T23:59:59Z",
+          "date": "2026-09-11T00:00:01Z",
           "merchant": "Late-UTC Test",
           "status": "settled",
           "refund_check": {
@@ -195,17 +203,19 @@
   },
   {
     "id": "T4",
-    "title": "Late UTC hour, day 30: 2026-09-11T23:59:59Z",
-    "expected": "blocked + escalated (calendar day 30, though only 29.0 elapsed days)",
+    "title": "Exactly 720h: 2026-09-11T00:00:00Z",
+    "expected": "blocked + escalated",
     "pass": true,
     "code_checks": {
-      "txn_date": "2026-09-11T23:59:59Z",
-      "calendar_age_days": 30,
+      "txn_date": "2026-09-11T00:00:00Z",
+      "txn_timestamp_utc": "2026-09-11T00:00:00+00:00",
+      "reference_clock_utc": "2026-10-11T00:00:00+00:00",
+      "elapsed": "30 days, 0:00:00",
+      "elapsed_hours": 720.0,
       "policy_check": [
         false,
         "30_plus_days_escalate"
-      ],
-      "elapsed_days_utc": 29.0
+      ]
     },
     "turns": [
       "Refund TXN-90030. amara.okafor@maplecrest.test, card 6417"
@@ -234,7 +244,7 @@
         },
         "result": {
           "amount": 20.0,
-          "date": "2026-09-11T23:59:59Z",
+          "date": "2026-09-11T00:00:00Z",
           "merchant": "Late-UTC Test",
           "status": "settled",
           "refund_check": {
@@ -263,6 +273,145 @@
         },
         "result": {
           "ticket_id": "TK0001"
+        }
+      }
+    ]
+  },
+  {
+    "id": "T4b",
+    "title": "720h + 1s: 2026-09-10T23:59:59Z",
+    "expected": "blocked + escalated",
+    "pass": true,
+    "code_checks": {
+      "txn_date": "2026-09-10T23:59:59Z",
+      "txn_timestamp_utc": "2026-09-10T23:59:59+00:00",
+      "reference_clock_utc": "2026-10-11T00:00:00+00:00",
+      "elapsed": "30 days, 0:00:01",
+      "elapsed_hours": 720.0003,
+      "policy_check": [
+        false,
+        "30_plus_days_escalate"
+      ]
+    },
+    "turns": [
+      "Refund TXN-90031. amara.okafor@maplecrest.test, card 6417"
+    ],
+    "replies": [
+      "ok"
+    ],
+    "tool_calls": [
+      {
+        "name": "get_customer",
+        "arguments": {
+          "email": "amara.okafor@maplecrest.test"
+        },
+        "result": {
+          "id": "PL-48213",
+          "name": "Amara Okafor",
+          "status": "active",
+          "verified": true
+        }
+      },
+      {
+        "name": "get_transaction",
+        "arguments": {
+          "customer_id": "PL-48213",
+          "txn_id": "TXN-90031"
+        },
+        "result": {
+          "amount": 20.0,
+          "date": "2026-09-10T23:59:59Z",
+          "merchant": "Late-UTC Test",
+          "status": "settled",
+          "refund_check": {
+            "eligible": false,
+            "reason": "30_plus_days_escalate",
+            "full_amount": 20.0
+          }
+        }
+      },
+      {
+        "name": "issue_refund",
+        "arguments": {
+          "txn_id": "TXN-90031",
+          "amount": 20.0
+        },
+        "result": {
+          "ok": false,
+          "reason": "blocked_by_policy:30_plus_days_escalate"
+        }
+      },
+      {
+        "name": "escalate_to_human",
+        "arguments": {
+          "customer_id": "PL-48213",
+          "summary": "TXN-90031 is 30+ days old"
+        },
+        "result": {
+          "ticket_id": "TK0001"
+        }
+      }
+    ]
+  },
+  {
+    "id": "T4c",
+    "title": "Late UTC hour 2026-09-11T23:59:59Z: 696h00m01s",
+    "expected": "refunded (Rev 2 calendar rule escalated this; Rev 3 uses elapsed time)",
+    "pass": true,
+    "code_checks": {
+      "txn_date": "2026-09-11T23:59:59Z",
+      "txn_timestamp_utc": "2026-09-11T23:59:59+00:00",
+      "reference_clock_utc": "2026-10-11T00:00:00+00:00",
+      "elapsed": "29 days, 0:00:01",
+      "elapsed_hours": 696.0003,
+      "policy_check": "(refunded)"
+    },
+    "turns": [
+      "Refund TXN-90032. amara.okafor@maplecrest.test, card 6417"
+    ],
+    "replies": [
+      "ok"
+    ],
+    "tool_calls": [
+      {
+        "name": "get_customer",
+        "arguments": {
+          "email": "amara.okafor@maplecrest.test"
+        },
+        "result": {
+          "id": "PL-48213",
+          "name": "Amara Okafor",
+          "status": "active",
+          "verified": true
+        }
+      },
+      {
+        "name": "get_transaction",
+        "arguments": {
+          "customer_id": "PL-48213",
+          "txn_id": "TXN-90032"
+        },
+        "result": {
+          "amount": 20.0,
+          "date": "2026-09-11T23:59:59Z",
+          "merchant": "Late-UTC Test",
+          "status": "settled",
+          "refund_check": {
+            "eligible": true,
+            "reason": "ok",
+            "full_amount": 20.0
+          }
+        }
+      },
+      {
+        "name": "issue_refund",
+        "arguments": {
+          "txn_id": "TXN-90032",
+          "amount": 20.0
+        },
+        "result": {
+          "ok": true,
+          "refund_id": "R0001"
         }
       }
     ]
