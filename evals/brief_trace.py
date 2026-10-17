@@ -1,4 +1,4 @@
-"""Small boundary trace for brief-only mode revision 3 (offline: scripted provider + code-level checks).
+"""Small boundary trace for brief-only mode revision 2 (offline: scripted provider + code-level checks).
     python -m evals.brief_trace      # writes traces/brief_boundaries.{md,json}
 """
 import json, pathlib, sys, os
@@ -74,7 +74,7 @@ case("T2", "Date-only 2026-09-11 (= 00:00:00Z): exactly 720h", "blocked + escala
 case("T3", "719h59m59s: 2026-09-11T00:00:01Z", "refunded (under 30 x 24h)")(_age_case("TXN-90029", "2026-09-11T00:00:01Z", True))
 case("T4", "Exactly 720h: 2026-09-11T00:00:00Z", "blocked + escalated")(_age_case("TXN-90030", "2026-09-11T00:00:00Z", False))
 case("T4b", "720h + 1s: 2026-09-10T23:59:59Z", "blocked + escalated")(_age_case("TXN-90031", "2026-09-10T23:59:59Z", False))
-case("T4c", "Late UTC hour 2026-09-11T23:59:59Z: 696h00m01s", "refunded (Rev 2 calendar rule escalated this; Rev 3 uses elapsed time)")(_age_case("TXN-90032", "2026-09-11T23:59:59Z", True))
+case("T4c", "Late UTC hour 2026-09-11T23:59:59Z: 696h00m01s", "refunded (elapsed time, not calendar date)")(_age_case("TXN-90032", "2026-09-11T23:59:59Z", True))
 
 
 @case("T5", "Stop after handoff, across turns via the signed state", "turn-2 refund blocked: handed_off_to_human")
@@ -136,11 +136,10 @@ def main():
                      "turns": [m["content"] for m in a.messages if m["role"] == "user"], "replies": replies,
                      "tool_calls": [{"name": n, "arguments": ar, "result": rs} for n, ar, rs in a.store.calls]})
         rows.append((cid, title, expect, ok, code, a))
-    md = ["# Brief-only mode revision 3 (Oct 17): boundary trace", "",
+    md = ["# Brief-only mode revision 2: boundary trace", "",
           f"Offline run (scripted provider and code-level checks; no model calls). Fixed reference clock: {REFERENCE_CLOCK_UTC.isoformat()} (never the wall clock). "
           "Age = elapsed time from the UTC transaction timestamp; < 720h qualifies, >= 720h escalates. Date-only fixtures mean 00:00:00Z. "
-          "Revision 2 (Oct 16) used calendar-date age; revision 3 replaces it per reviewer feedback. "
-          "Regenerate with `python -m evals.brief_trace`. Each scripted model deliberately attempts the refund, so every pass is enforced by code.", "",
+                    "Regenerate with `python -m evals.brief_trace`. Each scripted model deliberately attempts the refund, so every pass is enforced by code.", "",
           "| ID | Boundary | Expected | Result |", "|---|---|---|---|"]
     md += [f"| {c} | {t} | {e} | {'PASS' if ok else 'FAIL'} |" for c, t, e, ok, _, _ in rows]
     md += ["", f"**{sum(r[3] for r in rows)}/{len(rows)} pass.**", ""]

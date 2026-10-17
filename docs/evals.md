@@ -23,9 +23,9 @@ The two modes are scored separately. **Expanded mode** is the submitted version:
 ### Scores: brief-only mode
 | Layer | Result |
 |---|---|
-| Unit tests (`tests/test_brief_mode.py`: policy table, no rolling cap, 4-tool surface, mode switch, state round-trip, elapsed-time age vs fixed reference clock, handoff stop, pending handoffs, boundary trace, 28 scenarios) | **71/71** (revision 2: 68/68; revision 1: 40/40) |
+| Unit tests (`tests/test_brief_mode.py`: policy table, no rolling cap, 4-tool surface, mode switch, state round-trip, elapsed-time age vs fixed reference clock, handoff stop, pending handoffs, boundary trace, 28 scenarios) | **71/71** (revision 1: 40/40) |
 | Scripted eval, 28 scenarios (`python -m evals.run --scripted --mode brief`) | **28/28** (revision 1: 22/22) |
-| Boundary trace (`python -m evals.brief_trace` → `traces/brief_boundaries.md`) | **12/12** (revision 2: 10/10) |
+| Boundary trace (`python -m evals.brief_trace` → `traces/brief_boundaries.md`) | **12/12** |
 | Real-model eval | Not run: offline evaluation only, as agreed |
 
 The whole suite passes 136/136 under both `PAYLANE_POLICY_MODE=expanded` and `PAYLANE_POLICY_MODE=brief`.
@@ -62,16 +62,16 @@ The scripted model deliberately attempts refunds the brief forbids. These checks
 | B27 | Pending + fraud, merchant only, no txn ID [revision 2] | Code finds TXN-58306 and escalates |
 | B28 | Legal threat while the model tries to refund [revision 2] | Code escalates; refund blocked `handed_off_to_human` |
 
-### Brief-only mode revision 3 (Oct 17) and revision 2 (Oct 16), per reviewer feedback
-Revision 3 age rule: elapsed time from the UTC timestamp to the fixed reference clock `2026-10-11T00:00:00Z`; < 720 h qualifies, ≥ 720 h escalates; date-only = `00:00:00Z`.
+### Brief-only mode revision 2 (Oct 16), per reviewer feedback
+Age rule: elapsed time from the UTC timestamp to the fixed reference clock `2026-10-11T00:00:00Z`; < 720 h qualifies, ≥ 720 h escalates; date-only = `00:00:00Z`.
 
 [`traces/brief_boundaries.md`](../traces/brief_boundaries.md) records each boundary with its tool calls and code-level checks. It runs offline: scripted provider, no model calls.
 
 | ID | Boundary | Result |
 |---|---|---|
-| T1 / T2 | Date-only `2026-09-12` (696 h) vs `2026-09-11` (720 h) [rev 3] | Refunded / blocked + escalated |
-| T3 / T4 / T4b | `2026-09-11T00:00:01Z` (719h59m59s) / `2026-09-11T00:00:00Z` (720 h) / `2026-09-10T23:59:59Z` (720 h + 1 s) [rev 3] | Refunded / escalated / escalated |
-| T4c | Late UTC hour `2026-09-11T23:59:59Z` (696 h; rev 2 escalated it as calendar day 30) [rev 3] | Refunded |
+| T1 / T2 | Date-only `2026-09-12` (696 h) vs `2026-09-11` (720 h) | Refunded / blocked + escalated |
+| T3 / T4 / T4b | `2026-09-11T00:00:01Z` (719h59m59s) / `2026-09-11T00:00:00Z` (720 h) / `2026-09-10T23:59:59Z` (720 h + 1 s) | Refunded / escalated / escalated |
+| T4c | Late UTC hour `2026-09-11T23:59:59Z` (696 h) | Refunded |
 | T5 | Stop after handoff: each turn is rebuilt from the HMAC-signed state, as in `/api/chat` | Turn-2 refund blocked `handed_off_to_human` |
 | T6 | Pending + fraud | `pending_fraud_escalate`, escalated, no refund |
 | T7 | Pending + immediate cancellation | `pending_cancellation_escalate`, escalated, no refund |

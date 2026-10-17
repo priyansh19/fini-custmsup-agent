@@ -81,7 +81,7 @@ def _store_with(**txns):
     return st
 
 
-# Revision 3 (Oct 17): elapsed time from the UTC timestamp vs the fixed reference clock 2026-10-11T00:00:00Z.
+# Age check: elapsed time from the UTC timestamp vs the fixed reference clock 2026-10-11T00:00:00Z.
 @pytest.mark.parametrize("raw,hours,ok", [
     ("2026-09-12", 696, True),                      # date-only = 00:00:00Z
     ("2026-09-11", 720, False),                     # date-only, exactly 720h

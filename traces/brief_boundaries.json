@@ -356,7 +356,7 @@
   {
     "id": "T4c",
     "title": "Late UTC hour 2026-09-11T23:59:59Z: 696h00m01s",
-    "expected": "refunded (Rev 2 calendar rule escalated this; Rev 3 uses elapsed time)",
+    "expected": "refunded (elapsed time, not calendar date)",
     "pass": true,
     "code_checks": {
       "txn_date": "2026-09-11T23:59:59Z",

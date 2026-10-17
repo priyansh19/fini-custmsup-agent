@@ -54,7 +54,7 @@ def default_mode() -> str:
     return m if m in MODES else "expanded"
 
 
-# Revision 3 (Oct 17): elapsed time from the UTC transaction timestamp against a FIXED reference clock.
+# Age check: elapsed time from the UTC transaction timestamp against a FIXED reference clock.
 # The reference clock is the seed data's TODAY at 00:00:00Z (never the wall clock), so results are deterministic.
 REFERENCE_CLOCK_UTC = datetime(TODAY.year, TODAY.month, TODAY.day, tzinfo=timezone.utc)   # 2026-10-11T00:00:00Z
 MAX_AGE = timedelta(days=MAX_AGE_DAYS)   # 30 x 24h = 720h; age >= 720h escalates
@@ -98,7 +98,7 @@ def brief_refund_allowed(store: Store, session: dict, txn_id: str, amount: float
         return False, "partial_not_allowed_full_amount_only"
     if t["amount"] > AUTO_LIMIT:
         return False, "over_75_escalate"
-    if txn_age(t) >= MAX_AGE:   # revision 3: elapsed time vs fixed reference clock
+    if txn_age(t) >= MAX_AGE:   # elapsed time vs fixed reference clock
         return False, "30_plus_days_escalate"
     return True, "ok"
 
